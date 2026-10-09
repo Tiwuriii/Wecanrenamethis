@@ -1,0 +1,8 @@
+numpy
+shapely>=2
+pyproj
+rasterio
+requests
+pystac-client
+planetary-computer
+pillow

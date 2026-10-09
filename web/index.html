@@ -1,0 +1,837 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>San José Data Center Burden Atlas</title>
+<meta name="description" content="Environmental and social indicators around proposed and approved data centers in San José, by census tract and council district.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one-screen atlas. Brief/Sites/Districts/Index/Sources panel on the left, map fills the rest; stacks map-over-panel on phones. */
+:root {
+  --bg: #eef2f1;
+  --panel: #fbfcfc;
+  --ink: #16222b;
+  --muted: #56656f;
+  --line: #d3dbdd;
+  --accent: #1d5c86;
+  --accent-ink: #ffffff;
+  --map: #e3e9e7;
+  --water: #c3d7e0;
+  --road: #ffffff;
+  --road-case: #a9b5b8;
+  --district: #16222b;
+  --review: #d97a1f;
+  --approved: #b0232a;
+  --existing: #67737b;
+  --chip: #e2e9ea;
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1418; --panel: #131b20; --ink: #e3eaed; --muted: #94a3ab; --line: #27343b;
+    --accent: #6cb2e2; --accent-ink: #0b1419; --map: #10171b; --water: #183040; --road: #3a4a53;
+    --road-case: #0b1013; --district: #e3eaed; --review: #f0a04b; --approved: #ff6b6b; --existing: #8f9ba2;
+    --chip: #1d282e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1418; --panel: #131b20; --ink: #e3eaed; --muted: #94a3ab; --line: #27343b;
+  --accent: #6cb2e2; --accent-ink: #0b1419; --map: #10171b; --water: #183040; --road: #3a4a53;
+  --road-case: #0b1013; --district: #e3eaed; --review: #f0a04b; --approved: #ff6b6b; --existing: #8f9ba2;
+  --chip: #1d282e; color-scheme: dark;
+}
+
+/* ---- minimal Leaflet core ---- */
+.leaflet-pane,.leaflet-marker-icon,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+.leaflet-container{overflow:hidden;-webkit-tap-highlight-color:transparent;outline-offset:1px}
+.leaflet-container img.leaflet-image-layer,.leaflet-container .leaflet-overlay-pane svg,.leaflet-container svg{max-width:none!important;max-height:none!important}
+.leaflet-marker-icon,.leaflet-image-layer{user-select:none;-webkit-user-select:none}
+.leaflet-pane{z-index:400}.leaflet-overlay-pane{z-index:400}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
+.leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}
+.leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
+.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}
+.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}
+.leaflet-right .leaflet-control{float:right}
+.leaflet-top .leaflet-control{margin-top:10px}.leaflet-bottom .leaflet-control{margin-bottom:10px}
+.leaflet-left .leaflet-control{margin-left:10px}.leaflet-right .leaflet-control{margin-right:10px}
+.leaflet-zoom-animated{transform-origin:0 0}
+.leaflet-zoom-anim .leaflet-zoom-animated{transition:transform .25s cubic-bezier(0,0,.25,1)}
+.leaflet-zoom-anim .leaflet-zoom-hide{visibility:hidden}
+.leaflet-fade-anim .leaflet-popup{opacity:0;transition:opacity .2s linear}.leaflet-fade-anim .leaflet-map-pane .leaflet-popup{opacity:1}
+.leaflet-interactive{cursor:pointer}.leaflet-grab{cursor:grab}.leaflet-dragging .leaflet-grab{cursor:move}
+.leaflet-marker-icon,.leaflet-image-layer,.leaflet-pane>svg path{pointer-events:none}
+.leaflet-marker-icon.leaflet-interactive,.leaflet-pane>svg path.leaflet-interactive{pointer-events:auto}
+.leaflet-popup{position:absolute;text-align:center;margin-bottom:14px}
+.leaflet-popup-content-wrapper{text-align:left;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 6px 24px rgb(0 0 0 / .18)}
+.leaflet-popup-content{margin:12px 14px;min-width:240px;max-width:min(300px,70vw)}
+.leaflet-popup-tip-container{width:28px;height:14px;position:absolute;left:50%;margin-left:-14px;overflow:hidden;pointer-events:none}
+.leaflet-popup-tip{width:12px;height:12px;margin:-7px auto 0;transform:rotate(45deg);background:var(--panel);border:1px solid var(--line)}
+.leaflet-container a.leaflet-popup-close-button{position:absolute;top:2px;right:4px;width:24px;height:24px;font:18px/24px var(--font-body);text-align:center;text-decoration:none;color:var(--muted)}
+.leaflet-bar{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}
+.leaflet-bar a{display:block;width:32px;height:32px;text-align:center;text-decoration:none;color:var(--ink);font:600 18px/32px var(--font-body)}
+.leaflet-bar a+a{border-top:1px solid var(--line)}
+.leaflet-bar a:hover{background:var(--chip)}
+.leaflet-control-attribution{font-size:10.5px;padding:2px 6px;background:color-mix(in srgb,var(--panel) 85%,transparent);color:var(--muted);margin:0!important}
+.leaflet-tooltip{position:absolute;padding:3px 7px;white-space:nowrap;pointer-events:none;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px;font:500 12px var(--font-body)}
+
+/* ---- page ---- */
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--font-body);margin:0}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{height:100%;display:grid;grid-template-columns:minmax(340px,420px) 1fr;grid-template-rows:auto minmax(0,1fr)}
+header.top{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+.brand{display:flex;flex-direction:column;min-width:0}
+.brand h1{margin:0;font:700 20px/1.1 var(--font-display);font-stretch:118%;letter-spacing:-.01em;text-wrap:balance}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
+.top .spacer{flex:1}
+.status-key{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.status-key span{display:inline-flex;align-items:center;gap:6px}
+
+aside.panel{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;min-width:0}
+nav.tabs{display:flex;gap:2px;padding:8px 10px 0;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs button{border:0;background:none;padding:8px 10px 9px;font:600 13px var(--font-body);color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:18px;min-height:0;flex:1}
+.pane h2{margin:0;font:700 15px/1.25 var(--font-display);font-stretch:112%;text-wrap:balance}
+.pane h3{margin:0 0 6px;font:600 11.5px var(--font-body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.lede{margin:4px 0 0;color:var(--muted);max-width:62ch}
+.num{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.stat{background:var(--panel);padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat b{font:600 22px/1.1 var(--font-data);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.stat span{font-size:12px;color:var(--muted);line-height:1.35}
+
+ul.findings{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+ul.findings li{padding-left:14px;position:relative;max-width:64ch}
+ul.findings li::before{content:"";position:absolute;left:0;top:.62em;width:6px;height:6px;background:var(--approved);border-radius:1px}
+ul.asks{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.note{font-size:12.5px;color:var(--muted);border-left:2px solid var(--line);padding-left:10px;margin:0}
+
+.sitelist{display:flex;flex-direction:column;gap:8px}
+.site{border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+.site>button{all:unset;box-sizing:border-box;display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:center;width:100%;padding:10px 12px;cursor:pointer}
+.site>button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.site .addr{font-weight:600;min-width:0}
+.site .meta{grid-column:2/4;color:var(--muted);font-size:12.5px}
+.site.open{border-color:var(--accent)}
+.site .body{padding:0 12px 12px;display:flex;flex-direction:column;gap:12px}
+.pill{font:600 10.5px var(--font-body);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border-radius:99px;white-space:nowrap;border:1px solid currentColor}
+.pill.under_review{color:var(--review)}.pill.approved{color:var(--approved)}.pill.existing{color:var(--existing)}
+.mark{width:12px;height:12px;display:inline-block;flex:none;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--ink)}
+.mark.under_review{background:var(--review)}.mark.approved{background:var(--approved)}.mark.existing{background:var(--existing)}
+.mark.energy{border-radius:2px;transform:rotate(45deg);width:11px;height:11px}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px 12px;margin:0}
+.kv div{display:flex;flex-direction:column;min-width:0}
+.kv dt{font-size:11.5px;color:var(--muted)}
+.kv dd{margin:0;font:500 13px var(--font-data);font-variant-numeric:tabular-nums}
+.kv dd.na{color:var(--muted);font-family:var(--font-body);font-style:italic}
+.scroll-x{overflow-x:auto}
+table.rings{border-collapse:collapse;width:100%;font-size:12.5px}
+table.rings th,table.rings td{padding:4px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+table.rings th:first-child,table.rings td:first-child{text-align:left;white-space:normal;padding-left:0}
+table.rings thead th{font-weight:600;color:var(--muted);font-size:11.5px}
+table.rings td{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+table.rings td:first-child{font-family:var(--font-body)}
+.hi{color:var(--approved);font-weight:600}
+.flags{display:flex;flex-wrap:wrap;gap:6px}
+.flag{font-size:12px;padding:3px 8px;border-radius:4px;background:var(--chip)}
+.flag.warn{background:color-mix(in srgb,var(--approved) 16%,var(--panel))}
+
+table.dist{border-collapse:collapse;width:100%;font-size:12.5px}
+table.dist th,table.dist td{padding:6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.dist th:first-child,table.dist td:first-child{text-align:left;padding-left:0}
+table.dist thead th{color:var(--muted);font-weight:600;font-size:11px;vertical-align:bottom;white-space:normal}
+table.dist tbody tr{cursor:pointer}
+table.dist tbody tr:hover,table.dist tbody tr.sel{background:var(--chip)}
+table.dist td{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+table.dist .member{display:block;font-family:var(--font-body);color:var(--muted);font-size:11.5px;white-space:nowrap}
+.bar{display:inline-block;height:6px;background:var(--approved);border-radius:1px;vertical-align:middle;margin-left:6px;opacity:.8}
+
+.weights{display:flex;flex-direction:column;gap:12px}
+.weight label{display:flex;justify-content:space-between;gap:10px;font-weight:600;font-size:13px}
+.weight small{display:block;color:var(--muted);font-size:11.5px;font-weight:400;margin-top:1px}
+.weight input{width:100%;accent-color:var(--accent)}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:5px 10px;font-size:12.5px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--chip)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);align-self:flex-start}
+ol.toplist{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px}
+ol.toplist button{all:unset;cursor:pointer;display:flex;justify-content:space-between;gap:8px;width:100%}
+ol.toplist button:hover span:first-child{color:var(--accent)}
+ol.toplist button:focus-visible{outline:2px solid var(--accent)}
+ol.toplist .num{color:var(--muted)}
+
+dl.sources{margin:0;display:flex;flex-direction:column;gap:10px}
+dl.sources dt{font-weight:600}
+dl.sources dd{margin:0;color:var(--muted);font-size:12.5px}
+a{color:var(--accent)}
+
+.mapwrap{position:relative;min-height:0;min-width:0}
+#map{position:absolute;inset:0;background:var(--map)}
+.mapctl{position:absolute;z-index:1000;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 2px 10px rgb(0 0 0 / .08)}
+.metric{top:10px;left:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;width:min(320px,calc(100% - 240px))}
+.metric label{font:600 11px var(--font-body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.metric select{border:1px solid var(--line);border-radius:4px;background:var(--panel);padding:5px 6px;font-weight:600;max-width:100%}
+.metric p{margin:0;font-size:12px;color:var(--muted);line-height:1.35}
+.legend{left:10px;bottom:24px;padding:8px 10px;font-size:11.5px;display:flex;flex-direction:column;gap:5px;max-width:calc(100% - 20px)}
+.legend .unit{color:var(--muted)}
+.ramp{display:flex}
+.ramp i{width:28px;height:10px;display:block}
+.ramp-labels{display:flex;justify-content:space-between;color:var(--muted);font-family:var(--font-data);font-size:10.5px;gap:8px}
+.swatch{display:inline-block;width:14px;height:10px;vertical-align:middle;margin-right:4px}
+.layers{top:10px;right:54px;font-size:12.5px;max-width:calc(100% - 70px)}
+.layers summary{cursor:pointer;padding:7px 10px;font-weight:600;list-style:none}
+.layers summary::-webkit-details-marker{display:none}
+.layers summary::after{content:" ▾";color:var(--muted)}
+.layers[open] summary::after{content:" ▴"}
+.layers .opts{padding:0 10px 10px;display:flex;flex-direction:column;gap:5px}
+.layers label{display:flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap}
+.layers input{accent-color:var(--accent);margin:0}
+.dlabel{display:block;font:700 13px var(--font-display);font-stretch:120%;color:var(--district);text-shadow:0 0 3px var(--map),0 0 3px var(--map),0 0 6px var(--map);white-space:nowrap;pointer-events:none;text-align:center}
+.sitepin{width:16px;height:16px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1.5px var(--ink),0 2px 4px rgb(0 0 0 / .3);margin:1px}
+.sitepin.energy{border-radius:2px;transform:rotate(45deg);width:14px;height:14px;margin:2px}
+.sitepin.under_review{background:var(--review)}.sitepin.approved{background:var(--approved)}
+.sitepin.existing{background:var(--existing);width:11px;height:11px;margin:3.5px}
+.sitepin.sel{box-shadow:0 0 0 2.5px var(--accent),0 0 0 7px color-mix(in srgb,var(--accent) 30%,transparent)}
+.pop h4{margin:0 0 2px;font:700 14px var(--font-display);font-stretch:112%}
+.pop .sub{color:var(--muted);font-size:12px;margin-bottom:8px}
+.pop .row{display:grid;grid-template-columns:1fr auto;gap:8px;font-size:12.5px;padding:2px 0;border-bottom:1px dotted var(--line)}
+.pop .row b{font:500 12.5px var(--font-data);font-variant-numeric:tabular-nums}
+.pop .cap{margin:8px 0 4px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pop .dbar{display:grid;grid-template-columns:118px 1fr 26px;align-items:center;gap:6px;font-size:12px}
+.pop .dbar i{height:6px;background:var(--chip);border-radius:1px;position:relative;overflow:hidden}
+.pop .dbar s{position:absolute;inset:0 auto 0 0;background:var(--approved);text-decoration:none}
+.pop .dbar b{font:500 12px var(--font-data);text-align:right}
+.loading{position:absolute;inset:0;display:grid;place-items:center;padding:16px;text-align:center;color:var(--muted);z-index:2000;background:var(--map)}
+
+@media (max-width: 820px) {
+  html,body{height:auto}
+  .app{grid-template-columns:1fr;grid-template-rows:auto 62vh auto;height:auto}
+  .mapwrap{grid-row:2}
+  aside.panel{grid-row:3;border-right:0;border-top:1px solid var(--line)}
+  .pane{overflow:visible}
+  .status-key{display:none}
+  .metric{right:54px;width:auto}
+  .metric p{display:none}
+  .layers{right:auto;left:10px;top:auto;bottom:24px}
+  .legend{left:auto;right:10px;bottom:24px;max-width:180px}
+  .ramp i{width:20px}
+  .leaflet-control-attribution{display:none}
+}
+@media (prefers-reduced-motion: reduce){.leaflet-zoom-anim .leaflet-zoom-animated{transition:none}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>San José Data Center Burden Atlas</h1>
+      <p>Who lives next to the city's data center pipeline, and what they already breathe, feel and carry.</p>
+    </div>
+    <div class="spacer"></div>
+    <div class="status-key" aria-label="Map key">
+      <span><i class="mark under_review"></i>Under review</span>
+      <span><i class="mark approved"></i>Approved</span>
+      <span><i class="mark existing"></i>Operating</span>
+      <span><i class="mark energy under_review"></i>Large energy user</span>
+    </div>
+  </header>
+
+  <aside class="panel">
+    <nav class="tabs" role="tablist" aria-label="Panels">
+      <button role="tab" id="tab-brief" data-tab="brief" aria-selected="true">Brief</button>
+      <button role="tab" id="tab-sites" data-tab="sites" aria-selected="false">Sites</button>
+      <button role="tab" id="tab-districts" data-tab="districts" aria-selected="false">Districts</button>
+      <button role="tab" id="tab-index" data-tab="index" aria-selected="false">Burden index</button>
+      <button role="tab" id="tab-sources" data-tab="sources" aria-selected="false">Sources</button>
+    </nav>
+
+    <section class="pane" id="pane-brief" role="tabpanel" aria-labelledby="tab-brief">
+      <div>
+        <h2>The pipeline at a glance</h2>
+        <p class="lede">Figures come from the city's own permit list. Where a filing does not state a number, it is not counted.</p>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div>
+        <h3>What the data shows</h3>
+        <ul class="findings" id="findings"></ul>
+      </div>
+      <div>
+        <h3>What the filings leave out</h3>
+        <ul class="asks" id="asks"></ul>
+      </div>
+      <p class="note">These indicators describe the burden communities already carry. They do not model any single project's emissions. That link requires a project-level health risk assessment based on generator count, engine tier and testing hours.</p>
+    </section>
+
+    <section class="pane" id="pane-sites" role="tabpanel" aria-labelledby="tab-sites" hidden>
+      <div>
+        <h2>Project sites</h2>
+        <p class="lede">Select a site to see who lives within 1,000 feet, half a mile and one mile, and the burden they already carry.</p>
+      </div>
+      <div class="sitelist" id="sitelist"></div>
+    </section>
+
+    <section class="pane" id="pane-districts" role="tabpanel" aria-labelledby="tab-districts" hidden>
+      <div>
+        <h2>Council districts</h2>
+        <p class="lede">Project counts and population-weighted indicators by district. Select a row to zoom the map.</p>
+      </div>
+      <div class="scroll-x"><table class="dist" id="disttable"></table></div>
+      <p class="note">Percentiles are statewide from CalEnviroScreen 4.0; 100 is the most burdened tract in California. Surface temperature is the median of nine cloud-free summer Landsat scenes, 2023–2025.</p>
+    </section>
+
+    <section class="pane" id="pane-index" role="tabpanel" aria-labelledby="tab-index" hidden>
+      <div>
+        <h2>Cumulative burden index</h2>
+        <p class="lede">Each domain ranks San José census tracts from 0 to 100, where 100 is the most burdened tract in the city. Set how much each domain counts and the map recolors.</p>
+      </div>
+      <div class="presets">
+        <button class="btn" data-preset="default">Balanced</button>
+        <button class="btn" data-preset="air">Air &amp; health</button>
+        <button class="btn" data-preset="heat">Heat</button>
+        <button class="btn" data-preset="equal">Equal weights</button>
+      </div>
+      <div class="weights" id="weights"></div>
+      <button class="btn primary" id="showComposite">Show index on map</button>
+      <div>
+        <h3>Highest-scoring tracts</h3>
+        <ol class="toplist" id="toplist"></ol>
+      </div>
+    </section>
+
+    <section class="pane" id="pane-sources" role="tabpanel" aria-labelledby="tab-sources" hidden>
+      <div>
+        <h2>Sources and methods</h2>
+        <p class="lede" id="generated"></p>
+      </div>
+      <dl class="sources" id="sources"></dl>
+      <div>
+        <h3>Method notes</h3>
+        <ul class="asks" id="methods"></ul>
+      </div>
+    </section>
+  </aside>
+
+  <div class="mapwrap">
+    <div id="map" role="region" aria-label="Map of San José census tracts and project sites"></div>
+    <div class="mapctl metric">
+      <label for="metricSel">Color tracts by</label>
+      <select id="metricSel"></select>
+      <p id="metricDesc"></p>
+    </div>
+    <details class="mapctl layers" id="layersBox" open>
+      <summary>Layers</summary>
+      <div class="opts" id="layerOpts"></div>
+    </details>
+    <div class="mapctl legend" id="legend"></div>
+    <div class="loading" id="loading">Loading map data…</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+"use strict";
+const FILES = ["tracts","sites","districts","city","schools","health","cortese","wetlands","flood",
+               "roads_primary","roads_secondary","water"];
+const D = {};
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = (v, d = 0) => v == null || Number.isNaN(v) ? "—" : Number(v).toLocaleString("en-US", {maximumFractionDigits: d, minimumFractionDigits: d});
+const toF = c => c == null ? null : c * 9 / 5 + 32;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[ch]));
+const tractName = id => { const t = String(id).slice(-6); return `Tract ${+t.slice(0, 4)}${t.slice(4) === "00" ? "" : "." + t.slice(4)}`; };
+const STATUS = {under_review: "Under review", approved: "Approved", existing: "Operating"};
+const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Sequential burden ramp, pale to deep; every metric is oriented so darker = more burden.
+const RAMP = ["#fdf0d5", "#fbd39a", "#f6ad6a", "#ec7f4b", "#d4523a", "#a92f34", "#6d1a32"];
+const HEAT_RAMP = ["#fff5c8", "#fec44f", "#ec7014", "#cc2e26", "#800026"]; // matches pipeline/heat.py
+
+const DOMAIN_INFO = {
+  air:       {label: "Air pollution", desc: "Diesel PM, PM2.5, ozone, traffic density"},
+  health:    {label: "Health vulnerability", desc: "Asthma and heart-attack ER visits, low birth weight, adult COPD"},
+  heat:      {label: "Heat exposure", desc: "Summer surface temperature, paved surface, missing tree canopy"},
+  social:    {label: "Social vulnerability", desc: "Poverty, linguistic isolation, education, unemployment, housing burden"},
+  water:     {label: "Water & contamination", desc: "Groundwater threats, drinking water, impaired waters, cleanups, hazardous waste"},
+  proximity: {label: "Proximity to data centers", desc: "100 within ½ mile of a planned, approved or operating facility, fading to 0 at 3 miles"},
+};
+const PRESETS = {
+  default: {air: 25, health: 20, heat: 15, social: 20, water: 5, proximity: 15},
+  air:     {air: 40, health: 35, heat: 5, social: 10, water: 0, proximity: 10},
+  heat:    {air: 10, health: 15, heat: 45, social: 15, water: 0, proximity: 15},
+  equal:   {air: 10, health: 10, heat: 10, social: 10, water: 10, proximity: 10},
+};
+let weights = {...PRESETS.default};
+
+const SP = "state percentile";
+const METRICS = [
+  {id: "composite", group: "Index", label: "Cumulative burden index", get: p => p._composite, f: v => fmt(v), unit: "index 0–100, your weights",
+   desc: "Weighted blend of the six domains. Adjust the weights in the Burden index tab."},
+  ...Object.entries(DOMAIN_INFO).map(([k, v]) => ({id: "d_" + k, group: "Domains (rank within San José)", label: v.label,
+    get: p => p["d_" + k], f: v => fmt(v), unit: "city rank 0–100", desc: v.desc + ". 100 = most burdened tract in the city."})),
+  {id: "dieselP", group: "Air", label: "Diesel particulate matter", get: p => p.dieselP, f: v => fmt(v), unit: SP,
+   desc: "Diesel PM emissions (CalEnviroScreen 4.0). Data center backup generators burn diesel during testing and outages."},
+  {id: "pmP", group: "Air", label: "Fine particulates (PM2.5)", get: p => p.pmP, f: v => fmt(v), unit: SP, desc: "Annual mean PM2.5 concentration (CalEnviroScreen 4.0)."},
+  {id: "ozoneP", group: "Air", label: "Ozone", get: p => p.ozoneP, f: v => fmt(v), unit: SP, desc: "Summer ozone. Generator NOx is an ozone precursor."},
+  {id: "trafficP", group: "Air", label: "Traffic density", get: p => p.trafficP, f: v => fmt(v), unit: SP, desc: "Traffic volume near the tract (CalEnviroScreen 4.0)."},
+  {id: "asthmaP", group: "Health", label: "Asthma ER visits", get: p => p.asthmaP, f: v => fmt(v), unit: SP, desc: "Age-adjusted asthma emergency visits (CalEnviroScreen 4.0)."},
+  {id: "cvdP", group: "Health", label: "Heart attack ER visits", get: p => p.cvdP, f: v => fmt(v), unit: SP, desc: "Cardiovascular emergency visits (CalEnviroScreen 4.0)."},
+  {id: "lbwP", group: "Health", label: "Low birth weight", get: p => p.lbwP, f: v => fmt(v), unit: SP, desc: "Low birth-weight infants (CalEnviroScreen 4.0)."},
+  {id: "asthma_adult", group: "Health", label: "Adult asthma prevalence", get: p => p.asthma_adult, f: v => fmt(v, 1) + "%", unit: "% of adults", desc: "CDC PLACES model estimate, area-weighted from 2020 tracts."},
+  {id: "copd", group: "Health", label: "Adult COPD prevalence", get: p => p.copd, f: v => fmt(v, 1) + "%", unit: "% of adults", desc: "CDC PLACES model estimate, area-weighted from 2020 tracts."},
+  {id: "chd", group: "Health", label: "Coronary heart disease", get: p => p.chd, f: v => fmt(v, 1) + "%", unit: "% of adults", desc: "CDC PLACES model estimate."},
+  {id: "lst_c", group: "Heat & land", label: "Summer surface temperature", get: p => toF(p.lst_c), f: v => fmt(v) + "°F", unit: "°F, summer late morning",
+   desc: "Landsat 8/9 land surface temperature, median of 9 cloud-free scenes (Jun–Sep 2023–2025). Turn on Heat imagery to see it at 30 m."},
+  {id: "canopy_pct", group: "Heat & land", label: "Tree canopy", get: p => p.canopy_pct, f: v => fmt(v, 1) + "%", unit: "% canopy cover (darker = less shade)", invert: true,
+   desc: "NLCD 2021 tree canopy. The filings that count trees would remove at least 500."},
+  {id: "imperv_pct", group: "Heat & land", label: "Impervious surface", get: p => p.imperv_pct, f: v => fmt(v) + "%", unit: "% paved or roofed", desc: "NLCD 2021 impervious surface."},
+  {id: "povP", group: "People", label: "Poverty", get: p => p.povP, f: v => fmt(v), unit: SP, desc: "Share of residents below twice the federal poverty level (CalEnviroScreen 4.0)."},
+  {id: "lingP", group: "People", label: "Linguistic isolation", get: p => p.lingP, f: v => fmt(v), unit: SP, desc: "Households where no adult speaks English very well. Standard public notice reaches these residents least."},
+  {id: "housingBP", group: "People", label: "Housing burden", get: p => p.housingBP, f: v => fmt(v), unit: SP, desc: "Low-income households paying over 50% of income for housing. Rate increases for grid upgrades fall hardest here."},
+  {id: "Children_under10_pct", group: "People", label: "Children under 10", get: p => p.Children_under10_pct, f: v => fmt(v, 1) + "%", unit: "% of residents", desc: "Children are the most sensitive to diesel exhaust."},
+  {id: "Elderly_65over_pct", group: "People", label: "Adults 65 and older", get: p => p.Elderly_65over_pct, f: v => fmt(v, 1) + "%", unit: "% of residents", desc: "Older adults are the most sensitive to heat and particulates."},
+  {id: "gwthreatsP", group: "Water", label: "Groundwater threats", get: p => p.gwthreatsP, f: v => fmt(v), unit: SP, desc: "Leaking tanks and other sites that threaten groundwater (CalEnviroScreen 4.0)."},
+  {id: "CIscoreP", group: "Overall", label: "CalEnviroScreen 4.0 score", get: p => p.CIscoreP, f: v => fmt(v), unit: SP, desc: "California's official cumulative impact score. The top 25% statewide are SB 535 disadvantaged communities."},
+  {id: "dac", group: "Overall", label: "SB 535 disadvantaged communities", get: p => p.dac ? 1 : 0, f: v => v ? "Yes" : "No", unit: "", categorical: true,
+   desc: "Tracts CalEPA designated disadvantaged in 2022. They are eligible for California Climate Investments."},
+];
+const metricById = Object.fromEntries(METRICS.map(m => [m.id, m]));
+let metric = metricById.composite;
+
+/* ---------- load ---------- */
+Promise.all([...FILES.map(f => fetch(`data/${f}.geojson`).then(r => r.json()).then(j => { D[f] = j; })),
+             fetch("data/summary.json").then(r => r.json()).then(j => { D.summary = j; }),
+             fetch("data/lst_bounds.json").then(r => r.json()).then(j => { D.lst = j; })])
+  .then(init)
+  .catch(err => { document.getElementById("loading").textContent = `The map data did not load (${err.message}). Serve the web folder over http, as the README describes, and reload.`; });
+
+let map, tractLayer, districtLayer, labelLayer, ringLayer, lstImage;
+const overlays = {}, siteMarkers = [];
+
+function init() {
+  computeComposite();
+  map = L.map("map", {preferCanvas: true, minZoom: 9, maxZoom: 17, zoomSnap: .25});
+  map.zoomControl.setPosition("topright");
+  map.attributionControl.setPrefix(false).addAttribution("CalEnviroScreen 4.0 · CDC PLACES · USGS Landsat · NLCD · FEMA · CDE · CDPH · City of San José · Census TIGER");
+  [["base", 300], ["tracts", 350], ["context", 400], ["lines", 420], ["pts", 450]].forEach(([n, z]) => { map.createPane(n).style.zIndex = z; });
+  const svgLines = L.svg({pane: "lines"}), svgContext = L.svg({pane: "context"});
+
+  overlays.water = L.geoJSON(D.water, {pane: "base", interactive: false, style: () => ({stroke: false, fillColor: cssVar("--water"), fillOpacity: 1})}).addTo(map);
+  lstImage = L.imageOverlay("data/lst.png", D.lst.bounds, {pane: "base", opacity: .9, interactive: false});
+
+  tractLayer = L.geoJSON(D.tracts, {pane: "tracts", style: tractStyle, onEachFeature: (f, l) => {
+    l.on("click", e => L.popup({maxWidth: 320}).setLatLng(e.latlng).setContent(tractPopup(f.properties)).openOn(map));
+    l.on("mouseover", () => l.setStyle({weight: 2, color: cssVar("--ink")}));
+    l.on("mouseout", () => tractLayer.resetStyle(l));
+  }}).addTo(map);
+
+  const lineStyle = (color, weight, extra = {}) => () => ({color: cssVar(color), weight, opacity: 1, ...extra});
+  overlays.roads2 = L.geoJSON(D.roads_secondary, {pane: "lines", renderer: svgLines, interactive: false, style: lineStyle("--road", 1.1, {opacity: .85})}).addTo(map);
+  overlays.roads1case = L.geoJSON(D.roads_primary, {pane: "lines", renderer: svgLines, interactive: false, style: lineStyle("--road-case", 4.4, {opacity: .8})}).addTo(map);
+  overlays.roads1 = L.geoJSON(D.roads_primary, {pane: "lines", renderer: svgLines, interactive: false, style: lineStyle("--road", 2.4)}).addTo(map);
+  overlays.flood = L.geoJSON(D.flood, {pane: "context", renderer: svgContext, interactive: false, style: () => ({color: "#2f6fb0", weight: .6, fillColor: "#3d86d6", fillOpacity: .4})});
+  overlays.wetlands = L.geoJSON(D.wetlands, {pane: "context", renderer: svgContext, interactive: false, style: () => ({color: "#2a7d63", weight: .6, fillColor: "#36a07f", fillOpacity: .5})});
+  overlays.dac = L.geoJSON({type: "FeatureCollection", features: D.tracts.features.filter(f => f.properties.dac)},
+    {pane: "lines", renderer: svgLines, interactive: false, style: lineStyle("--ink", 2.4, {dashArray: "6 4", fill: false})});
+  districtLayer = L.geoJSON(D.districts, {pane: "lines", renderer: svgLines, interactive: false, style: lineStyle("--district", 1.6, {opacity: .8, fill: false})}).addTo(map);
+  labelLayer = L.layerGroup(D.districts.features.map(f => L.marker(f.properties.label, {interactive: false, keyboard: false, pane: "lines",
+    icon: L.divIcon({className: "", html: `<span class="dlabel">D${f.properties.district}</span>`, iconSize: [36, 16], iconAnchor: [18, 8]})}))).addTo(map);
+
+  const dot = (fill, r) => (f, ll) => L.circleMarker(ll, {pane: "pts", radius: r, weight: 1.2, color: "#ffffff", fillColor: fill, fillOpacity: 1});
+  overlays.schools = L.geoJSON(D.schools, {pointToLayer: dot("#2563a6", 4), onEachFeature: (f, l) => l.bindTooltip(`${esc(f.properties.name)} · ${fmt(f.properties.enroll)} students`)});
+  overlays.health = L.geoJSON(D.health, {pointToLayer: dot("#0f8a7a", 4.5), onEachFeature: (f, l) => l.bindTooltip(`${esc(f.properties.name)} · ${esc(f.properties.type)}`)});
+  overlays.cortese = L.geoJSON(D.cortese, {pointToLayer: dot("#c99a00", 5.5), onEachFeature: (f, l) => l.bindTooltip(`Cortese list: ${esc(f.properties.name)}`)});
+
+  ringLayer = L.layerGroup();
+  D.sites.features.filter(f => f.properties.status !== "existing").forEach(f => {
+    const ll = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
+    ringLayer.addLayer(L.circle(ll, {radius: 1609.344, pane: "lines", renderer: svgLines, color: cssVar("--ink"), weight: 1, dashArray: "4 4", fill: false, interactive: false}));
+    ringLayer.addLayer(L.circle(ll, {radius: 304.8, pane: "lines", renderer: svgLines, color: cssVar("--approved"), weight: 1.6, fill: false, interactive: false}));
+  });
+  D.sites.features.forEach((f, i) => {
+    const p = f.properties;
+    const cls = `sitepin ${p.status}${p.kind === "large_energy" ? " energy" : ""}`;
+    const m = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]], {
+      icon: L.divIcon({className: "", html: `<div class="${cls}" data-i="${i}"></div>`, iconSize: [20, 20], iconAnchor: [10, 10]}),
+      zIndexOffset: p.status === "existing" ? 0 : 500, title: p.address, alt: p.address});
+    m.on("click", () => { selectTab("sites"); openSite(i, true); });
+    m.bindTooltip(`${esc(p.address)} · ${STATUS[p.status]}${p.mw ? " · " + p.mw + " MW" : ""}`, {direction: "top", offset: [0, -10]});
+    siteMarkers.push(m.addTo(map));
+  });
+  overlays.sites = L.layerGroup(siteMarkers);
+
+  map.fitBounds(L.geoJSON(D.city).getBounds(), {padding: [10, 10]});
+  buildMetricSelect(); buildLayerToggles(); buildBrief(); buildSites(); buildDistricts(); buildWeights(); buildSources();
+  document.getElementById("loading").hidden = true;
+  if (location.hash) selectTab(location.hash.slice(1));
+
+  // repaint map colors when the viewer's theme changes
+  const restyle = () => {
+    tractLayer.setStyle(tractStyle);
+    [overlays.water, overlays.roads1, overlays.roads1case, overlays.roads2, overlays.dac, districtLayer].forEach(o => o.setStyle(o.options.style));
+    renderLegend();
+  };
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", restyle);
+  new MutationObserver(restyle).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
+}
+
+/* ---------- choropleth ---------- */
+let breaks = [];
+const heatOn = () => lstImage && map && map.hasLayer(lstImage);
+function computeComposite() {
+  const tot = Object.values(weights).reduce((a, b) => a + b, 0) || 1;
+  D.tracts.features.forEach(f => {
+    const p = f.properties;
+    p._composite = Object.entries(weights).reduce((s, [k, w]) => s + w * (p["d_" + k] ?? 0), 0) / tot;
+  });
+}
+function metricValues() { return D.tracts.features.map(f => metric.get(f.properties)).filter(v => v != null).sort((a, b) => a - b); }
+function computeBreaks() {
+  breaks = [];
+  if (metric.categorical) return;
+  const vals = metricValues();
+  for (let i = 1; i < RAMP.length; i++) breaks.push(vals[Math.floor(i * vals.length / RAMP.length)]);
+}
+function colorFor(v) {
+  if (v == null) return cssVar("--chip");
+  if (metric.categorical) return v ? RAMP[5] : RAMP[0];
+  let k = breaks.findIndex(b => v < b);
+  if (k === -1) k = RAMP.length - 1;
+  return RAMP[metric.invert ? RAMP.length - 1 - k : k];
+}
+function tractStyle(f) {
+  return {color: cssVar("--panel"), weight: .5, opacity: heatOn() ? .5 : .9, fillColor: colorFor(metric.get(f.properties)), fillOpacity: heatOn() ? 0 : .82};
+}
+function setMetric(id) {
+  metric = metricById[id];
+  document.getElementById("metricSel").value = id;
+  document.getElementById("metricDesc").textContent = metric.desc;
+  computeBreaks(); tractLayer.setStyle(tractStyle); renderLegend();
+}
+function renderLegend() {
+  const el = document.getElementById("legend");
+  if (heatOn()) {
+    el.innerHTML = `<b>Summer surface temperature</b><span class="unit">Landsat, 30 m pixels</span>
+      <div class="ramp">${HEAT_RAMP.map(c => `<i style="background:${c};width:39px"></i>`).join("")}</div>
+      <div class="ramp-labels"><span>${fmt(toF(D.lst.min_c))}°F or less</span><span>${fmt(toF(D.lst.max_c))}°F+</span></div>`;
+    return;
+  }
+  if (metric.categorical) {
+    el.innerHTML = `<b>${esc(metric.label)}</b><div><span class="swatch" style="background:${RAMP[5]}"></span>Designated &nbsp; <span class="swatch" style="background:${RAMP[0]}"></span>Not designated</div>`;
+    return;
+  }
+  const vals = metricValues();
+  const cols = metric.invert ? [...RAMP].reverse() : RAMP;
+  el.innerHTML = `<b>${esc(metric.label)}</b><span class="unit">${esc(metric.unit)} · 7 equal-count tract groups</span>
+    <div class="ramp">${cols.map(c => `<i style="background:${c}"></i>`).join("")}</div>
+    <div class="ramp-labels"><span>${metric.f(vals[0])}</span><span>${metric.f(vals[Math.floor(vals.length / 2)])}</span><span>${metric.f(vals[vals.length - 1])}</span></div>`;
+}
+function buildMetricSelect() {
+  const sel = document.getElementById("metricSel");
+  const groups = {};
+  METRICS.forEach(m => (groups[m.group] ??= []).push(m));
+  sel.innerHTML = Object.entries(groups).map(([g, ms]) => `<optgroup label="${esc(g)}">${ms.map(m => `<option value="${m.id}">${esc(m.label)}</option>`).join("")}</optgroup>`).join("");
+  sel.addEventListener("change", () => setMetric(sel.value));
+  setMetric("composite");
+}
+
+/* ---------- layer toggles ---------- */
+const LAYER_DEFS = [
+  ["sites", "Project sites", true], ["rings", "1-mile and 1,000-ft rings", false], ["districts", "Council districts", true],
+  ["dac", "SB 535 tracts (dashed)", false], ["heat", "Heat imagery (30 m)", false], ["schools", "Public schools", false],
+  ["health", "Hospitals & care facilities", false], ["flood", "FEMA 100-year flood zone", false], ["wetlands", "Wetlands", false],
+  ["cortese", "Cortese hazardous sites", false], ["roads", "Roads", true],
+];
+function layersFor(id) {
+  return {sites: [overlays.sites], rings: [ringLayer], districts: [districtLayer, labelLayer], dac: [overlays.dac], heat: [lstImage],
+    schools: [overlays.schools], health: [overlays.health], flood: [overlays.flood], wetlands: [overlays.wetlands],
+    cortese: [overlays.cortese], roads: [overlays.roads2, overlays.roads1case, overlays.roads1]}[id];
+}
+function buildLayerToggles() {
+  const box = document.getElementById("layerOpts");
+  box.innerHTML = LAYER_DEFS.map(([id, label, on]) => `<label><input type="checkbox" id="lyr-${id}" ${on ? "checked" : ""}> ${label}</label>`).join("");
+  LAYER_DEFS.forEach(([id]) => document.getElementById(`lyr-${id}`).addEventListener("change", e => {
+    layersFor(id).forEach(l => e.target.checked ? l.addTo(map) : map.removeLayer(l));
+    if (id === "heat") { tractLayer.setStyle(tractStyle); renderLegend(); }
+  }));
+  if (matchMedia("(max-width: 820px)").matches) document.getElementById("layersBox").open = false;
+}
+function setLayer(id, on) {
+  const el = document.getElementById(`lyr-${id}`);
+  if (el.checked !== on) { el.checked = on; el.dispatchEvent(new Event("change")); }
+}
+
+/* ---------- tract popup ---------- */
+function tractPopup(p) {
+  const bars = Object.entries(DOMAIN_INFO).map(([k, v]) => `<div class="dbar"><span>${v.label.replace(" to data centers", "")}</span><i><s style="width:${p["d_" + k] ?? 0}%"></s></i><b>${fmt(p["d_" + k])}</b></div>`).join("");
+  const row = (l, v) => `<div class="row"><span>${l}</span><b>${v}</b></div>`;
+  return `<div class="pop"><h4>${tractName(p.tract)}</h4>
+    <div class="sub">${fmt(p.pop)} residents${p.dac ? " · SB 535 disadvantaged community" : ""}</div>
+    ${metric.id !== "composite" ? row(esc(metric.label), metric.f(metric.get(p))) : ""}
+    ${row("Burden index (current weights)", fmt(p._composite))}
+    <div class="cap">Rank within San José (100 = worst)</div>
+    <div style="display:flex;flex-direction:column;gap:3px">${bars}</div>
+    <div class="cap">Indicators</div>
+    ${row("Diesel PM, state pctile", fmt(p.dieselP))}
+    ${row("Asthma ER visits, state pctile", fmt(p.asthmaP))}
+    ${row("Summer surface temp", fmt(toF(p.lst_c)) + "°F")}
+    ${row("Tree canopy", fmt(p.canopy_pct, 1) + "%")}
+    ${row("Poverty, state pctile", fmt(p.povP))}
+    ${row("Nearest data center", fmt(p.dc_dist_mi, 1) + " mi")}</div>`;
+}
+
+/* ---------- city reference values ---------- */
+function popMedian(key) {
+  const rows = D.tracts.features.map(f => [f.properties[key], f.properties.pop]).filter(r => r[0] != null).sort((a, b) => a[0] - b[0]);
+  const half = rows.reduce((a, r) => a + r[1], 0) / 2;
+  let acc = 0;
+  for (const [v, w] of rows) { acc += w; if (acc >= half) return v; }
+}
+function popMean(key) {
+  let s = 0, w = 0;
+  D.tracts.features.forEach(f => { const v = f.properties[key]; if (v != null) { s += v * f.properties.pop; w += f.properties.pop; } });
+  return s / w;
+}
+const ordinal = n => { const r = Math.round(n), s = ["th", "st", "nd", "rd"], v = r % 100; return r + (s[(v - 20) % 10] || s[v] || s[0]); };
+
+/* ---------- brief ---------- */
+function buildBrief() {
+  const S = D.summary;
+  const planned = D.sites.features.map(f => f.properties).filter(p => p.status !== "existing");
+  const dcs = planned.filter(p => p.kind === "data_center");
+  const withGen = planned.filter(p => p.generators).length;
+  const withCooling = dcs.filter(p => p.cooling).length;
+  const stat = (b, s) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`;
+  document.getElementById("stats").innerHTML = [
+    stat(`${S.n_review_dc} + ${S.n_approved_dc}`, "data centers under review + approved, plus 2 non-data-center large energy users"),
+    stat(`${fmt(S.mw_known_total)} MW`, `stated load in the ${planned.length - S.n_mw_unstated} filings that give one. ${S.n_mw_unstated} filings state none`),
+    stat(fmt(S.pop_within_1mi), "residents within 1 mile of a pending or approved site"),
+    stat(`${S.schools_within_1mi}`, `public schools within 1 mile, enrolling ${fmt(S.students_within_1mi)} students`),
+    stat(fmt(S.trees_removed_known), "trees removed, in the filings that count them"),
+    stat(fmt(S.generators_known), `standby generators, counted in only ${withGen} filings`),
+  ].join("");
+
+  const dieselMed = popMedian("dieselP"), asthmaMed = popMedian("asthmaP");
+  const aboveDiesel = dcs.filter(p => p.rings.mi1.w_dieselP > dieselMed).length;
+  const aboveAsthma = dcs.filter(p => p.rings.mi1.w_asthmaP > asthmaMed).length;
+  const byDist = {};
+  planned.forEach(p => (byDist[p.district] ??= []).push(p));
+  const distList = Object.keys(byDist).sort((a, b) => a - b);
+  const nearDac = planned.filter(p => p.rings.mi1.dac_pop_pct > 0).length;
+  const cityTemp = toF(popMean("lst_c"));
+  const siteTemp = toF(planned.reduce((a, p) => a + p.rings.mi1.w_lst_c, 0) / planned.length);
+  const d3 = D.districts.features.find(f => f.properties.district === "3")?.properties;
+  const downtown = dcs.filter(p => p.district === "3");
+  const downtownPop = downtown.length ? Math.max(...downtown.map(p => p.rings.mi1.pop)) : 0;
+  const nextToHomes = dcs.filter(p => /residential|homes|units/i.test(p.summary)).length;
+
+  const items = [
+    `All ${planned.length} pending and approved projects are in ${distList.length} of the 10 council districts (${distList.map(d => `D${d}: ${byDist[d].length}`).join(", ")}). Six districts host none.`,
+    `${aboveDiesel} of ${dcs.length} data center sites have neighbors within 1 mile who already breathe more diesel exhaust than the typical San José resident. The citywide median is the ${ordinal(dieselMed)} state percentile. Backup generators would add to that load.`,
+    `${aboveAsthma} of ${dcs.length} data center sites are surrounded by tracts with asthma emergency-visit rates above the city median.`,
+    d3 && downtown.length ? `District 3 (downtown) has ${downtown.length} data center proposals. ${fmt(d3.dac_pop_pct)}% of its residents live in SB 535 disadvantaged tracts, and its diesel PM burden is at the ${ordinal(d3.w_dieselP)} state percentile. Up to ${fmt(downtownPop)} people live within a mile of a single downtown site.` : "",
+    nextToHomes ? `${nextToHomes} data center proposals share a project with new apartment towers, so generator yards and cooling equipment would sit beside future homes.` : "",
+    `${nearDac} of ${planned.length} projects are within 1 mile of an SB 535 disadvantaged community.`,
+    heatSentence(siteTemp, cityTemp, planned),
+  ].filter(Boolean);
+  document.getElementById("findings").innerHTML = items.map(t => `<li>${t}</li>`).join("");
+
+  document.getElementById("asks").innerHTML = [
+    `Power: ${S.n_mw_unstated} of ${planned.length} filings state no electrical load. San José's deal with PG&amp;E reserves ${S.pge_deal_mw} MW for large projects, about 80% of the city's current use.`,
+    `Generators: only ${withGen} filings count them. Each site needs the number, engine tier, fuel, permitted testing hours and a BAAQMD health risk assessment.`,
+    `Water: only ${withCooling} of ${dcs.length} data center filings name a cooling method, and none of them states daily water use.`,
+    "Noise: modeled levels from chillers, fans and generator tests at the nearest home and school.",
+    "Ratepayers: who pays for substations and transmission upgrades if projects use less power than they reserved.",
+  ].map(t => `<li>${t}</li>`).join("");
+}
+
+// Say what the heat data actually shows: hotter, cooler or about the same as the city.
+function heatSentence(siteTemp, cityTemp, planned) {
+  const canopySite = planned.reduce((a, p) => a + p.rings.mi1.w_canopy_pct, 0) / planned.length;
+  const canopyCity = popMean("canopy_pct");
+  const trees = D.summary.trees_removed_known;
+  const diff = siteTemp - cityTemp;
+  const temp = Math.abs(diff) < 1.5
+    ? `The land within 1 mile of the projects is about as hot as the city overall on summer mornings (${fmt(siteTemp)}°F surface temperature vs ${fmt(cityTemp)}°F).`
+    : `The land within 1 mile of the projects averages ${fmt(siteTemp)}°F surface temperature on summer mornings, ${fmt(Math.abs(diff))}°F ${diff > 0 ? "hotter" : "cooler"} than the city overall (${fmt(cityTemp)}°F).`;
+  return `${temp} Tree canopy there averages ${fmt(canopySite, 1)}%, against ${fmt(canopyCity, 1)}% citywide, and the filings would remove at least ${fmt(trees)} more trees.`;
+}
+
+/* ---------- sites ---------- */
+function buildSites() {
+  const order = {under_review: 0, approved: 1, existing: 2};
+  const items = D.sites.features.map((f, i) => ({p: f.properties, i}))
+    .sort((a, b) => order[a.p.status] - order[b.p.status] || (a.p.kind === "large_energy") - (b.p.kind === "large_energy") || (b.p.mw || 0) - (a.p.mw || 0));
+  document.getElementById("sitelist").innerHTML = items.map(({p, i}) => `
+    <div class="site" id="site-${i}">
+      <button aria-expanded="false" data-i="${i}">
+        <i class="mark ${p.status}${p.kind === "large_energy" ? " energy" : ""}"></i>
+        <span class="addr">${esc(p.address)}</span>
+        <span class="pill ${p.status}">${STATUS[p.status]}</span>
+        <span class="meta">${[p.file, p.operator, `District ${p.district}`, p.mw ? `${p.mw} MW` : p.status !== "existing" ? "MW not stated" : null,
+          p.kind === "large_energy" ? "large energy user, not a data center" : null].filter(Boolean).map(esc).join(" · ")}</span>
+      </button>
+      <div class="body" hidden></div>
+    </div>`).join("");
+  document.querySelectorAll(".site>button").forEach(b => b.addEventListener("click", () => openSite(+b.dataset.i, false)));
+}
+function openSite(i, fromMap) {
+  const el = document.getElementById(`site-${i}`);
+  const wasOpen = el.classList.contains("open");
+  document.querySelectorAll(".site.open").forEach(s => { s.classList.remove("open"); s.querySelector(".body").hidden = true; s.querySelector("button").setAttribute("aria-expanded", "false"); });
+  document.querySelectorAll(".sitepin.sel").forEach(s => s.classList.remove("sel"));
+  if (wasOpen && !fromMap) return;
+  const f = D.sites.features[i], p = f.properties;
+  el.classList.add("open");
+  el.querySelector("button").setAttribute("aria-expanded", "true");
+  const body = el.querySelector(".body");
+  body.hidden = false;
+  body.innerHTML = siteBody(p);
+  document.querySelector(`.sitepin[data-i="${i}"]`)?.classList.add("sel");
+  map.flyTo([f.geometry.coordinates[1], f.geometry.coordinates[0]], 14, {duration: reduceMotion() ? 0 : .8});
+  if (p.status !== "existing") setLayer("rings", true);
+  el.scrollIntoView({block: "nearest", behavior: reduceMotion() ? "auto" : "smooth"});
+}
+function siteBody(p) {
+  const r = p.rings;
+  const kv = (l, v) => `<div><dt>${l}</dt><dd class="${v == null ? "na" : ""}">${v == null ? "not stated" : v}</dd></div>`;
+  const med = Object.fromEntries(["dieselP", "asthmaP", "CIscoreP", "povP", "lst_c", "canopy_pct"].map(k => [k, popMedian(k)]));
+  const cell = (v, key, d = 0, conv = x => x, lowIsWorse = false) => {
+    const bad = v != null && (lowIsWorse ? v < med[key] : v > med[key]);
+    return `<td class="${bad ? "hi" : ""}">${fmt(conv(v), d)}</td>`;
+  };
+  const rows = [
+    ["Residents", k => `<td>${fmt(r[k].pop)}</td>`],
+    ["Children under 10", k => `<td>${fmt(r[k].kids)}</td>`],
+    ["Adults 65+", k => `<td>${fmt(r[k].elders)}</td>`],
+    ["Public schools (students)", k => `<td>${r[k].schools}${r[k].students ? ` (${fmt(r[k].students)})` : ""}</td>`],
+    ["Hospitals & care facilities", k => `<td>${r[k].health}</td>`],
+    ["Residents in SB 535 tracts", k => `<td>${fmt(r[k].dac_pop_pct)}%</td>`],
+    ["Diesel PM, state pctile", k => cell(r[k].w_dieselP, "dieselP")],
+    ["Asthma ER, state pctile", k => cell(r[k].w_asthmaP, "asthmaP")],
+    ["CalEnviroScreen, state pctile", k => cell(r[k].w_CIscoreP, "CIscoreP")],
+    ["Poverty, state pctile", k => cell(r[k].w_povP, "povP")],
+    ["Summer surface temp, °F", k => cell(r[k].w_lst_c, "lst_c", 0, toF)],
+    ["Tree canopy, %", k => cell(r[k].w_canopy_pct, "canopy_pct", 1, x => x, true)],
+  ];
+  const flags = [];
+  if (p.in_flood_zone) flags.push(["warn", "Inside the FEMA 100-year flood zone"]);
+  else if (p.flood_within_1000ft) flags.push(["", "FEMA flood zone within 1,000 ft"]);
+  if (r.mi1.wetland_acres > 0) flags.push([r.mi1.wetland_acres > 50 ? "warn" : "", `${fmt(r.mi1.wetland_acres)} acres of wetland within 1 mile`]);
+  if (p.res_zoned_1000ft > 0) flags.push(["warn", `${fmt(p.res_zoned_1000ft)}% of land within 1,000 ft is zoned residential`]);
+  if (p.mixed_zoned_1000ft > 0) flags.push(["", `${fmt(p.mixed_zoned_1000ft)}% within 1,000 ft is mixed-use or downtown zoning that allows housing`]);
+  if (p.host_dac) flags.push(["warn", "Sited inside an SB 535 disadvantaged community"]);
+  if (r.mi1.cortese) flags.push(["", `${r.mi1.cortese} Cortese-list hazardous site(s) within 1 mile`]);
+  flags.push(["", `Nearest public school: ${esc(p.nearest_school.name)}, ${fmt(p.nearest_school.ft / 5280, 2)} mi`]);
+  return `
+    <p style="margin:0">${esc(p.summary)}</p>
+    <dl class="kv">
+      ${kv("Electrical load", p.mw ? p.mw + " MW" : null)}
+      ${kv("Floor area", p.sqft ? fmt(p.sqft) + " sq ft" : null)}
+      ${kv("Generators", p.generators ? fmt(p.generators) : p.generator_mw ? p.generator_mw + " MW of generators" : null)}
+      ${kv("Trees removed", p.trees_removed != null ? fmt(p.trees_removed) : null)}
+      ${kv("Cooling", p.cooling ? esc(p.cooling) : null)}
+      ${kv(p.approved ? "Approved" : "Submitted", p.approved || p.submitted || null)}
+    </dl>
+    <div class="scroll-x"><table class="rings"><thead><tr><th></th><th>1,000 ft</th><th>½ mile</th><th>1 mile</th></tr></thead>
+      <tbody>${rows.map(([l, fn]) => `<tr><td>${l}</td>${["ft1000", "mi05", "mi1"].map(fn).join("")}</tr>`).join("")}</tbody></table></div>
+    <p class="note"><span class="hi">Red</span> values are worse than San José's population median. Ring counts are apportioned by area from census tracts, so 1,000-ft figures are approximate.</p>
+    <div class="flags">${flags.map(([c, t]) => `<span class="flag ${c}">${t}</span>`).join("")}</div>`;
+}
+
+/* ---------- districts ---------- */
+function buildDistricts() {
+  const ds = D.districts.features.map(f => f.properties).sort((a, b) => a.district - b.district);
+  const maxMW = Math.max(...ds.map(d => d.mw_known), 1);
+  const t = document.getElementById("disttable");
+  t.innerHTML = `<thead><tr><th>District</th><th>Projects: review / approved</th><th>Stated MW</th><th>% in SB 535 tracts</th><th>Diesel PM pctile</th><th>Asthma ER pctile</th><th>Summer °F</th><th>Canopy %</th></tr></thead>
+    <tbody>${ds.map(d => `<tr data-d="${d.district}" tabindex="0">
+      <td><b>D${d.district}</b><span class="member">${esc(d.member)}</span></td>
+      <td>${d.projects_review} / ${d.projects_approved}</td>
+      <td>${d.mw_known ? fmt(d.mw_known) + `<span class="bar" style="width:${Math.round(36 * d.mw_known / maxMW)}px"></span>` : "—"}</td>
+      <td>${fmt(d.dac_pop_pct)}</td><td>${fmt(d.w_dieselP)}</td><td>${fmt(d.w_asthmaP)}</td><td>${fmt(toF(d.w_lst_c))}</td><td>${fmt(d.w_canopy_pct, 1)}</td></tr>`).join("")}</tbody>`;
+  const go = tr => {
+    t.querySelectorAll("tr.sel").forEach(x => x.classList.remove("sel"));
+    tr.classList.add("sel");
+    const f = D.districts.features.find(f => f.properties.district === tr.dataset.d);
+    map.fitBounds(L.geoJSON(f).getBounds(), {padding: [20, 20]});
+  };
+  t.querySelectorAll("tbody tr").forEach(tr => {
+    tr.addEventListener("click", () => go(tr));
+    tr.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(tr); } });
+  });
+}
+
+/* ---------- weights ---------- */
+function buildWeights() {
+  document.getElementById("weights").innerHTML = Object.entries(DOMAIN_INFO).map(([k, v]) => `<div class="weight">
+    <label for="w-${k}"><span>${v.label}<small>${v.desc}</small></span><span class="num" id="wv-${k}"></span></label>
+    <input type="range" id="w-${k}" min="0" max="50" step="1" value="${weights[k]}"></div>`).join("");
+  const sync = () => {
+    const tot = Object.values(weights).reduce((a, b) => a + b, 0) || 1;
+    Object.keys(weights).forEach(k => {
+      document.getElementById(`w-${k}`).value = weights[k];
+      document.getElementById(`wv-${k}`).textContent = Math.round(100 * weights[k] / tot) + "%";
+    });
+    computeComposite();
+    if (metric.id === "composite") { computeBreaks(); tractLayer.setStyle(tractStyle); renderLegend(); }
+    renderTop();
+  };
+  Object.keys(weights).forEach(k => document.getElementById(`w-${k}`).addEventListener("input", e => { weights[k] = +e.target.value; sync(); }));
+  document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => { weights = {...PRESETS[b.dataset.preset]}; sync(); }));
+  document.getElementById("showComposite").addEventListener("click", () => { setLayer("heat", false); setMetric("composite"); });
+  sync();
+}
+function renderTop() {
+  const top = [...D.tracts.features].sort((a, b) => b.properties._composite - a.properties._composite).slice(0, 10);
+  const ol = document.getElementById("toplist");
+  ol.innerHTML = top.map((f, i) => `<li><button data-k="${i}"><span>${tractName(f.properties.tract)}${f.properties.dac ? " · SB 535" : ""} · ${fmt(f.properties.dc_dist_mi, 1)} mi from a data center</span><span class="num">${fmt(f.properties._composite)}</span></button></li>`).join("");
+  ol.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    const f = top[+b.dataset.k], bounds = L.geoJSON(f).getBounds();
+    map.fitBounds(bounds, {maxZoom: 14});
+    L.popup({maxWidth: 320}).setLatLng(bounds.getCenter()).setContent(tractPopup(f.properties)).openOn(map);
+  }));
+}
+
+/* ---------- sources ---------- */
+function buildSources() {
+  document.getElementById("generated").textContent = `Compiled ${D.summary.generated}. Every layer comes from a public source and can be rebuilt with the pipeline in the project repository.`;
+  const src = [
+    ["City of San José: Data Center and other Large Energy-Use Projects", "https://www.sanjoseca.gov/your-government/departments-offices/planning-building-code-enforcement/planning-division/data-center-and-other-large-energy-use-projects", "Permit files, addresses, MW, generators, trees and cooling (page updated July 13, 2026). Operating facilities are a partial list from operator-published addresses."],
+    ["CalEnviroScreen 4.0 (OEHHA)", "https://oehha.ca.gov/calenviroscreen/report/calenviroscreen-40", "Pollution, health and population indicators by 2010 census tract, as statewide percentiles."],
+    ["SB 535 Disadvantaged Communities, 2022 (CalEPA)", "https://oehha.ca.gov/calenviroscreen/sb535", "The official disadvantaged-community designation."],
+    ["CDC PLACES, census tract data", "https://www.cdc.gov/places/", "Model-based estimates of adult asthma, COPD, heart disease and more, on 2020 tracts."],
+    ["Landsat 8/9 Collection 2 Level-2 surface temperature (USGS, via Microsoft Planetary Computer)", "https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2", "Nine cloud-free scenes, June to September 2023–2025, with clouds and water masked; per-pixel median."],
+    ["NLCD 2021 impervious surface and tree canopy (MRLC)", "https://www.mrlc.gov/", "30 m rasters averaged per tract."],
+    ["California Public Schools 2024–25 (CDE)", "https://data.ca.gov/dataset/california-public-schools-2024-25", "School locations and enrollment."],
+    ["Licensed Healthcare Facilities, December 2024 (CDPH)", "https://data.chhs.ca.gov/", "Open hospitals, skilled nursing and other licensed facilities."],
+    ["FEMA National Flood Hazard Layer", "https://www.fema.gov/flood-maps/national-flood-hazard-layer", "Special Flood Hazard Areas (100-year)."],
+    ["City of San José GIS", "https://gisdata-csj.opendata.arcgis.com/", "Council districts (2021 lines), zoning, wetlands and the Cortese list."],
+    ["US Census TIGERweb", "https://tigerweb.geo.census.gov/", "2020 tracts, plus roads and water for the base map."],
+    ["KQED: San José and PG&E power agreement", "https://www.kqed.org/news/12049830/san-jose-and-pge-strike-deal-to-attract-data-centers-to-south-bay", "880 MW for ten large-load projects, about 80% of the city's current use."],
+  ];
+  document.getElementById("sources").innerHTML = src.map(([t, u, d]) => `<div><dt><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></dt><dd>${esc(d)}</dd></div>`).join("");
+  document.getElementById("methods").innerHTML = [
+    "Census tracts are the 2010 tracts that CalEnviroScreen uses. A tract is included when at least 5% of its area is inside city limits.",
+    "Each domain averages its component percentiles, then re-ranks San José tracts so that 100 means the most burdened tract in the city.",
+    "Ring populations are apportioned by area from tract totals (ACS 2015–2019, via CalEnviroScreen). Smaller rings are less precise.",
+    "District values are population-weighted across the tracts each district overlaps.",
+    "Surface temperature measures how hot the ground gets at the satellite's late-morning pass. It runs hotter than air temperature but shows where heat builds up. ECOSTRESS data can replace it (see pipeline/ecostress_optional.py).",
+    "Residential share counts R- and UR zoning. Mixed-use and downtown zones that allow housing are reported separately.",
+  ].map(t => `<li>${t}</li>`).join("");
+}
+
+/* ---------- tabs ---------- */
+function selectTab(name) {
+  if (!document.getElementById(`pane-${name}`)) return;
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  document.querySelectorAll(".pane").forEach(p => { p.hidden = p.id !== `pane-${name}`; });
+}
+document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => selectTab(b.dataset.tab)));
+</script>
