@@ -2,12 +2,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>San José Data Center Burden Atlas</title>
-<meta name="description" content="Environmental and social indicators around proposed and approved data centers in San José, by census tract and council district.">
+<meta name="description" content="Environmental and social indicators around proposed and approved data centers in San José, with California and national context.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: one-screen atlas. Brief/Sites/Districts/Index/Sources panel on the left, map fills the rest; stacks map-over-panel on phones. */
+/* Layout: one-screen atlas. Panel (Overview / Sites / Districts / Beyond San José / About) on the left, map on the right with one "lens" card; stacks map-over-panel on phones. */
 :root {
   --bg: #eef2f1;
   --panel: #fbfcfc;
@@ -16,6 +16,7 @@
   --line: #d3dbdd;
   --accent: #1d5c86;
   --accent-ink: #ffffff;
+  --accent-soft: #dce9f2;
   --map: #e3e9e7;
   --water: #c3d7e0;
   --road: #ffffff;
@@ -25,6 +26,7 @@
   --approved: #b0232a;
   --existing: #67737b;
   --chip: #e2e9ea;
+  --scrim: rgb(14 22 28 / .45);
   --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
   --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-data: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -33,22 +35,22 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1418; --panel: #131b20; --ink: #e3eaed; --muted: #94a3ab; --line: #27343b;
-    --accent: #6cb2e2; --accent-ink: #0b1419; --map: #10171b; --water: #183040; --road: #3a4a53;
+    --accent: #6cb2e2; --accent-ink: #0b1419; --accent-soft: #1a3142; --map: #10171b; --water: #183040; --road: #3a4a53;
     --road-case: #0b1013; --district: #e3eaed; --review: #f0a04b; --approved: #ff6b6b; --existing: #8f9ba2;
-    --chip: #1d282e; color-scheme: dark;
+    --chip: #1d282e; --scrim: rgb(0 0 0 / .6); color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1418; --panel: #131b20; --ink: #e3eaed; --muted: #94a3ab; --line: #27343b;
-  --accent: #6cb2e2; --accent-ink: #0b1419; --map: #10171b; --water: #183040; --road: #3a4a53;
+  --accent: #6cb2e2; --accent-ink: #0b1419; --accent-soft: #1a3142; --map: #10171b; --water: #183040; --road: #3a4a53;
   --road-case: #0b1013; --district: #e3eaed; --review: #f0a04b; --approved: #ff6b6b; --existing: #8f9ba2;
-  --chip: #1d282e; color-scheme: dark;
+  --chip: #1d282e; --scrim: rgb(0 0 0 / .6); color-scheme: dark;
 }
 
 /* ---- minimal Leaflet core ---- */
 .leaflet-pane,.leaflet-marker-icon,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
 .leaflet-container{overflow:hidden;-webkit-tap-highlight-color:transparent;outline-offset:1px}
-.leaflet-container img.leaflet-image-layer,.leaflet-container .leaflet-overlay-pane svg,.leaflet-container svg{max-width:none!important;max-height:none!important}
+.leaflet-container img.leaflet-image-layer,.leaflet-container svg{max-width:none!important;max-height:none!important}
 .leaflet-marker-icon,.leaflet-image-layer{user-select:none;-webkit-user-select:none}
 .leaflet-pane{z-index:400}.leaflet-overlay-pane{z-index:400}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
 .leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}
@@ -85,44 +87,62 @@ body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--font-body);margin
 [hidden]{display:none!important}
 button,select,input{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.app{height:100%;display:grid;grid-template-columns:minmax(340px,420px) 1fr;grid-template-rows:auto minmax(0,1fr)}
+a{color:var(--accent)}
+.num{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.app{height:100%;display:grid;grid-template-columns:minmax(340px,430px) 1fr;grid-template-rows:auto minmax(0,1fr)}
 header.top{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
-.brand{display:flex;flex-direction:column;min-width:0}
+.brand{display:flex;flex-direction:column;min-width:0;flex:1}
 .brand h1{margin:0;font:700 20px/1.1 var(--font-display);font-stretch:118%;letter-spacing:-.01em;text-wrap:balance}
 .brand p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
-.top .spacer{flex:1}
-.status-key{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
-.status-key span{display:inline-flex;align-items:center;gap:6px}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:6px 11px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--chip)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
 
 aside.panel{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;min-width:0}
-nav.tabs{display:flex;gap:2px;padding:8px 10px 0;border-bottom:1px solid var(--line);overflow-x:auto}
-nav.tabs button{border:0;background:none;padding:8px 10px 9px;font:600 13px var(--font-body);color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs{display:flex;gap:2px;padding:6px 8px 0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+nav.tabs button{border:0;background:none;padding:9px 9px 10px;font:600 13px var(--font-body);color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
 nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
-.pane{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:18px;min-height:0;flex:1}
-.pane h2{margin:0;font:700 15px/1.25 var(--font-display);font-stretch:112%;text-wrap:balance}
-.pane h3{margin:0 0 6px;font:600 11.5px var(--font-body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
-.lede{margin:4px 0 0;color:var(--muted);max-width:62ch}
-.num{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.pane{overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:20px;min-height:0;flex:1}
+.pane>*{flex-shrink:0}
+.pane h2{margin:0;font:700 17px/1.25 var(--font-display);font-stretch:112%;text-wrap:balance}
+.pane h3{margin:0 0 8px;font:600 11.5px var(--font-body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.lede{margin:6px 0 0;color:var(--muted);max-width:62ch}
+.hero{margin:0;font-size:15.5px;line-height:1.5;max-width:60ch}
+.hero b{font-weight:700}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.note{font-size:12.5px;color:var(--muted);border-left:2px solid var(--line);padding-left:10px;margin:0}
+details.more>summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--accent);list-style:none}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>summary::before{content:"+ "}
+details.more[open]>summary::before{content:"− "}
+details.more>*:not(summary){margin-top:10px}
 
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.stat{background:var(--panel);padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat{background:var(--panel);padding:11px 12px;display:flex;flex-direction:column;gap:3px;min-width:0}
 .stat b{font:600 22px/1.1 var(--font-data);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .stat span{font-size:12px;color:var(--muted);line-height:1.35}
+.stat a{font-size:11px;color:var(--muted)}
 
 ul.findings{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
 ul.findings li{padding-left:14px;position:relative;max-width:64ch}
 ul.findings li::before{content:"";position:absolute;left:0;top:.62em;width:6px;height:6px;background:var(--approved);border-radius:1px}
-ul.asks{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
-.note{font-size:12.5px;color:var(--muted);border-left:2px solid var(--line);padding-left:10px;margin:0}
+ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:3px 11px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.chip .n{font-family:var(--font-data);font-weight:500;margin-left:4px;opacity:.8}
 
 .sitelist{display:flex;flex-direction:column;gap:8px}
 .site{border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
 .site>button{all:unset;box-sizing:border-box;display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:center;width:100%;padding:10px 12px;cursor:pointer}
+.site>button:hover .addr{color:var(--accent)}
 .site>button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .site .addr{font-weight:600;min-width:0}
 .site .meta{grid-column:2/4;color:var(--muted);font-size:12.5px}
 .site.open{border-color:var(--accent)}
-.site .body{padding:0 12px 12px;display:flex;flex-direction:column;gap:12px}
+.site .body{padding:0 12px 14px;display:flex;flex-direction:column;gap:14px}
 .pill{font:600 10.5px var(--font-body);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border-radius:99px;white-space:nowrap;border:1px solid currentColor}
 .pill.under_review{color:var(--review)}.pill.approved{color:var(--approved)}.pill.existing{color:var(--existing)}
 .mark{width:12px;height:12px;display:inline-block;flex:none;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--ink)}
@@ -134,96 +154,132 @@ ul.asks{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
 .kv dd{margin:0;font:500 13px var(--font-data);font-variant-numeric:tabular-nums}
 .kv dd.na{color:var(--muted);font-family:var(--font-body);font-style:italic}
 .scroll-x{overflow-x:auto}
-table.rings{border-collapse:collapse;width:100%;font-size:12.5px}
-table.rings th,table.rings td{padding:4px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
-table.rings th:first-child,table.rings td:first-child{text-align:left;white-space:normal;padding-left:0}
-table.rings thead th{font-weight:600;color:var(--muted);font-size:11.5px}
-table.rings td{font-family:var(--font-data);font-variant-numeric:tabular-nums}
-table.rings td:first-child{font-family:var(--font-body)}
+table.grid{border-collapse:collapse;width:100%;font-size:12.5px}
+table.grid caption{text-align:left;font:600 11.5px var(--font-body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding-bottom:4px}
+table.grid th,table.grid td{padding:5px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+table.grid th:first-child,table.grid td:first-child{text-align:left;white-space:normal;padding-left:0;font-family:var(--font-body)}
+table.grid thead th{font-weight:600;color:var(--muted);font-size:11.5px}
+table.grid td{font-family:var(--font-data);font-variant-numeric:tabular-nums}
 .hi{color:var(--approved);font-weight:600}
 .flags{display:flex;flex-wrap:wrap;gap:6px}
 .flag{font-size:12px;padding:3px 8px;border-radius:4px;background:var(--chip)}
 .flag.warn{background:color-mix(in srgb,var(--approved) 16%,var(--panel))}
 
-table.dist{border-collapse:collapse;width:100%;font-size:12.5px}
-table.dist th,table.dist td{padding:6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
-table.dist th:first-child,table.dist td:first-child{text-align:left;padding-left:0}
-table.dist thead th{color:var(--muted);font-weight:600;font-size:11px;vertical-align:bottom;white-space:normal}
-table.dist tbody tr{cursor:pointer}
-table.dist tbody tr:hover,table.dist tbody tr.sel{background:var(--chip)}
-table.dist td{font-family:var(--font-data);font-variant-numeric:tabular-nums}
-table.dist .member{display:block;font-family:var(--font-body);color:var(--muted);font-size:11.5px;white-space:nowrap}
-.bar{display:inline-block;height:6px;background:var(--approved);border-radius:1px;vertical-align:middle;margin-left:6px;opacity:.8}
+.dpick{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.dpick button{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:7px 0 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;font:700 14px var(--font-display);font-stretch:115%}
+.dpick button small{font:500 10.5px var(--font-data);color:var(--muted)}
+.dpick button.has small{color:var(--approved)}
+.dpick button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.dcard{border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:12px}
+.dcard h3{margin:0;font:700 16px var(--font-display);font-stretch:112%;letter-spacing:0;text-transform:none;color:var(--ink)}
+.dcard .who{color:var(--muted);font-size:12.5px;margin-top:-10px}
 
-.weights{display:flex;flex-direction:column;gap:12px}
-.weight label{display:flex;justify-content:space-between;gap:10px;font-weight:600;font-size:13px}
-.weight small{display:block;color:var(--muted);font-size:11.5px;font-weight:400;margin-top:1px}
-.weight input{width:100%;accent-color:var(--accent)}
-.presets{display:flex;flex-wrap:wrap;gap:6px}
-.btn{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:5px 10px;font-size:12.5px;font-weight:600;cursor:pointer}
-.btn:hover{background:var(--chip)}
-.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);align-self:flex-start}
-ol.toplist{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px}
-ol.toplist button{all:unset;cursor:pointer;display:flex;justify-content:space-between;gap:8px;width:100%}
-ol.toplist button:hover span:first-child{color:var(--accent)}
-ol.toplist button:focus-visible{outline:2px solid var(--accent)}
-ol.toplist .num{color:var(--muted)}
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .axis text{fill:var(--muted);font:11px var(--font-data)}
+.chart .grid line{stroke:var(--line);stroke-width:1}
+.chart .lbl{font:600 11.5px var(--font-body);fill:var(--ink)}
+.chart .tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:7px 9px;font-size:12px;box-shadow:0 4px 14px rgb(0 0 0 / .12);min-width:150px;z-index:2}
+.chart .tip b{display:block;margin-bottom:3px}
+.chart .tip div{display:flex;justify-content:space-between;gap:12px}
+.chart .tip div span:last-child{font-family:var(--font-data)}
+.chart .tip .ca{font-weight:700}
+.legend-row{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted)}
+.legend-row span{display:inline-flex;align-items:center;gap:6px}
+.legend-row i{display:inline-block;width:18px;height:0;border-top:2.5px solid}
 
+.prec{display:flex;flex-direction:column;gap:10px}
+.pcard{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.pcard .where{font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;letter-spacing:.02em}
+.pcard .where b{color:var(--ink);font-weight:600}
+.pcard h4{margin:0;font:700 14.5px/1.3 var(--font-display);font-stretch:108%;text-wrap:balance}
+.pcard p{margin:0;font-size:13px}
+.pcard .lesson{background:var(--accent-soft);border-radius:4px;padding:7px 9px;font-size:12.5px}
+.pcard .lesson b{color:var(--accent)}
+.pcard .src{font-size:11.5px;color:var(--muted)}
+.tags{display:flex;gap:4px;flex-wrap:wrap}
+.tag{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 5px}
+
+.weights{display:flex;flex-direction:column;gap:10px}
+.weight label{display:flex;justify-content:space-between;gap:10px;font-weight:600;font-size:12.5px}
+.weight input{width:100%;accent-color:var(--accent);margin:2px 0 0}
 dl.sources{margin:0;display:flex;flex-direction:column;gap:10px}
 dl.sources dt{font-weight:600}
 dl.sources dd{margin:0;color:var(--muted);font-size:12.5px}
-a{color:var(--accent)}
 
+/* map */
 .mapwrap{position:relative;min-height:0;min-width:0}
 #map{position:absolute;inset:0;background:var(--map)}
 .mapctl{position:absolute;z-index:1000;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 2px 10px rgb(0 0 0 / .08)}
-.metric{top:10px;left:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;width:min(320px,calc(100% - 240px))}
-.metric label{font:600 11px var(--font-body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
-.metric select{border:1px solid var(--line);border-radius:4px;background:var(--panel);padding:5px 6px;font-weight:600;max-width:100%}
-.metric p{margin:0;font-size:12px;color:var(--muted);line-height:1.35}
-.legend{left:10px;bottom:24px;padding:8px 10px;font-size:11.5px;display:flex;flex-direction:column;gap:5px;max-width:calc(100% - 20px)}
-.legend .unit{color:var(--muted)}
+.lens{top:10px;left:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;width:300px;max-height:calc(100% - 120px);overflow-y:auto}
+.lens .cap{font:600 11px var(--font-body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.lensgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.lensgrid button{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:6px 8px;font-size:12.5px;font-weight:600;text-align:left;cursor:pointer;line-height:1.25}
+.lensgrid button:hover{background:var(--chip)}
+.lensgrid button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.lens p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.4}
+.lens select{width:100%;border:1px solid var(--line);border-radius:4px;background:var(--panel);padding:5px 6px;font-size:12.5px}
+.legend{left:10px;bottom:24px;padding:8px 10px;font-size:11.5px;display:flex;flex-direction:column;gap:4px;width:250px}
+.legend b{font-weight:600}
 .ramp{display:flex}
-.ramp i{width:28px;height:10px;display:block}
-.ramp-labels{display:flex;justify-content:space-between;color:var(--muted);font-family:var(--font-data);font-size:10.5px;gap:8px}
+.ramp i{flex:1;height:10px;display:block}
+.ramp-ends{display:flex;justify-content:space-between;color:var(--muted);gap:8px}
+.ramp-ends .num{font-size:10.5px}
 .swatch{display:inline-block;width:14px;height:10px;vertical-align:middle;margin-right:4px}
-.layers{top:10px;right:54px;font-size:12.5px;max-width:calc(100% - 70px)}
-.layers summary{cursor:pointer;padding:7px 10px;font-weight:600;list-style:none}
+.layers{top:10px;right:54px;font-size:12.5px;max-width:calc(100% - 340px);max-height:calc(100% - 60px);overflow-y:auto}
+.layers summary{cursor:pointer;padding:7px 11px;font-weight:600;list-style:none;white-space:nowrap}
 .layers summary::-webkit-details-marker{display:none}
 .layers summary::after{content:" ▾";color:var(--muted)}
 .layers[open] summary::after{content:" ▴"}
-.layers .opts{padding:0 10px 10px;display:flex;flex-direction:column;gap:5px}
+.layers .opts{padding:0 11px 10px;display:flex;flex-direction:column;gap:4px}
+.layers .grp{font:600 10.5px var(--font-body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-top:6px}
 .layers label{display:flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap}
 .layers input{accent-color:var(--accent);margin:0}
+.key{right:10px;bottom:24px;padding:7px 10px;font-size:11.5px;display:flex;flex-direction:column;gap:3px}
+.key span{display:inline-flex;align-items:center;gap:7px}
 .dlabel{display:block;font:700 13px var(--font-display);font-stretch:120%;color:var(--district);text-shadow:0 0 3px var(--map),0 0 3px var(--map),0 0 6px var(--map);white-space:nowrap;pointer-events:none;text-align:center}
 .sitepin{width:16px;height:16px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1.5px var(--ink),0 2px 4px rgb(0 0 0 / .3);margin:1px}
 .sitepin.energy{border-radius:2px;transform:rotate(45deg);width:14px;height:14px;margin:2px}
 .sitepin.under_review{background:var(--review)}.sitepin.approved{background:var(--approved)}
 .sitepin.existing{background:var(--existing);width:11px;height:11px;margin:3.5px}
 .sitepin.sel{box-shadow:0 0 0 2.5px var(--accent),0 0 0 7px color-mix(in srgb,var(--accent) 30%,transparent)}
-.pop h4{margin:0 0 2px;font:700 14px var(--font-display);font-stretch:112%}
+.pop h4{margin:0;font:700 14px var(--font-display);font-stretch:112%}
 .pop .sub{color:var(--muted);font-size:12px;margin-bottom:8px}
+.pop .lead{margin:0 0 4px;font-size:13px;line-height:1.4}
+.pop .lead b{font-family:var(--font-data)}
+.pop .stand{margin:0 0 8px;font-size:12.5px;color:var(--muted)}
 .pop .row{display:grid;grid-template-columns:1fr auto;gap:8px;font-size:12.5px;padding:2px 0;border-bottom:1px dotted var(--line)}
 .pop .row b{font:500 12.5px var(--font-data);font-variant-numeric:tabular-nums}
-.pop .cap{margin:8px 0 4px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.pop .dbar{display:grid;grid-template-columns:118px 1fr 26px;align-items:center;gap:6px;font-size:12px}
+.pop .dbar{display:grid;grid-template-columns:96px 1fr 24px;align-items:center;gap:6px;font-size:12px}
 .pop .dbar i{height:6px;background:var(--chip);border-radius:1px;position:relative;overflow:hidden}
 .pop .dbar s{position:absolute;inset:0 auto 0 0;background:var(--approved);text-decoration:none}
 .pop .dbar b{font:500 12px var(--font-data);text-align:right}
 .loading{position:absolute;inset:0;display:grid;place-items:center;padding:16px;text-align:center;color:var(--muted);z-index:2000;background:var(--map)}
 
-@media (max-width: 820px) {
+.welcome{position:fixed;inset:0;z-index:5000;background:var(--scrim);display:grid;place-items:center;padding:16px}
+.welcome .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;max-width:520px;width:100%;padding:22px 22px 18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 60px rgb(0 0 0 / .3);max-height:calc(100% - 32px);overflow-y:auto}
+.welcome h2{margin:0;font:700 21px/1.15 var(--font-display);font-stretch:118%;text-wrap:balance}
+.welcome p{margin:0;color:var(--muted)}
+.welcome ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;counter-reset:s}
+.welcome li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;counter-increment:s}
+.welcome li::before{content:counter(s);width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:700 13px var(--font-data)}
+.welcome li b{display:block}
+.welcome li span{color:var(--muted);font-size:13px}
+.welcome .row{display:flex;justify-content:flex-end;gap:8px}
+
+@media (max-width: 860px) {
   html,body{height:auto}
-  .app{grid-template-columns:1fr;grid-template-rows:auto 62vh auto;height:auto}
+  .app{grid-template-columns:1fr;grid-template-rows:auto 66vh auto;height:auto}
   .mapwrap{grid-row:2}
   aside.panel{grid-row:3;border-right:0;border-top:1px solid var(--line)}
   .pane{overflow:visible}
-  .status-key{display:none}
-  .metric{right:54px;width:auto}
-  .metric p{display:none}
-  .layers{right:auto;left:10px;top:auto;bottom:24px}
-  .legend{left:auto;right:10px;bottom:24px;max-width:180px}
-  .ramp i{width:20px}
+  .lens{right:54px;width:auto;max-height:none;padding:8px 10px}
+  .lens p,.lens details{display:none}
+  .lensgrid{grid-template-columns:repeat(3,1fr)}
+  .lensgrid button{font-size:11.5px;padding:5px 6px}
+  .layers{right:auto;left:10px;top:auto;bottom:24px;max-width:calc(100% - 20px);max-height:50%}
+  .legend{left:auto;right:10px;bottom:24px;width:170px}
+  .key{display:none}
   .leaflet-control-attribution{display:none}
 }
 @media (prefers-reduced-motion: reduce){.leaflet-zoom-anim .leaflet-zoom-animated{transition:none}}
@@ -233,185 +289,218 @@ a{color:var(--accent)}
   <header class="top">
     <div class="brand">
       <h1>San José Data Center Burden Atlas</h1>
-      <p>Who lives next to the city's data center pipeline, and what they already breathe, feel and carry.</p>
+      <p>Who lives next to San José's data center pipeline, and what California and other states have learned.</p>
     </div>
-    <div class="spacer"></div>
-    <div class="status-key" aria-label="Map key">
-      <span><i class="mark under_review"></i>Under review</span>
-      <span><i class="mark approved"></i>Approved</span>
-      <span><i class="mark existing"></i>Operating</span>
-      <span><i class="mark energy under_review"></i>Large energy user</span>
-    </div>
+    <button class="btn" id="helpBtn">How to use this map</button>
   </header>
 
   <aside class="panel">
     <nav class="tabs" role="tablist" aria-label="Panels">
-      <button role="tab" id="tab-brief" data-tab="brief" aria-selected="true">Brief</button>
-      <button role="tab" id="tab-sites" data-tab="sites" aria-selected="false">Sites</button>
+      <button role="tab" id="tab-overview" data-tab="overview" aria-selected="true">Overview</button>
+      <button role="tab" id="tab-sites" data-tab="sites" aria-selected="false">Project sites</button>
       <button role="tab" id="tab-districts" data-tab="districts" aria-selected="false">Districts</button>
-      <button role="tab" id="tab-index" data-tab="index" aria-selected="false">Burden index</button>
-      <button role="tab" id="tab-sources" data-tab="sources" aria-selected="false">Sources</button>
+      <button role="tab" id="tab-beyond" data-tab="beyond" aria-selected="false">Beyond San José</button>
+      <button role="tab" id="tab-about" data-tab="about" aria-selected="false">About</button>
     </nav>
 
-    <section class="pane" id="pane-brief" role="tabpanel" aria-labelledby="tab-brief">
-      <div>
-        <h2>The pipeline at a glance</h2>
-        <p class="lede">Figures come from the city's own permit list. Where a filing does not state a number, it is not counted.</p>
+    <section class="pane" id="pane-overview" role="tabpanel" aria-labelledby="tab-overview">
+      <p class="hero" id="hero"></p>
+      <div class="actions">
+        <button class="btn primary" data-go="sites">See the project sites</button>
+        <button class="btn" data-go="districts">Look up a district</button>
+        <button class="btn" data-go="beyond">Compare with other states</button>
       </div>
       <div class="stats" id="stats"></div>
       <div>
-        <h3>What the data shows</h3>
+        <h3>Key findings</h3>
         <ul class="findings" id="findings"></ul>
+        <details class="more"><summary>More findings</summary><ul class="findings" id="findings2"></ul></details>
       </div>
-      <div>
-        <h3>What the filings leave out</h3>
-        <ul class="asks" id="asks"></ul>
-      </div>
-      <p class="note">These indicators describe the burden communities already carry. They do not model any single project's emissions. That link requires a project-level health risk assessment based on generator count, engine tier and testing hours.</p>
+      <details class="more">
+        <summary>What the permit filings leave out</summary>
+        <ul class="plain" id="asks"></ul>
+      </details>
+      <p class="note">These indicators describe the burden communities already carry. They do not model any single project's emissions. That requires a project-level health risk assessment based on generator count, engine type and testing hours.</p>
     </section>
 
     <section class="pane" id="pane-sites" role="tabpanel" aria-labelledby="tab-sites" hidden>
       <div>
         <h2>Project sites</h2>
-        <p class="lede">Select a site to see who lives within 1,000 feet, half a mile and one mile, and the burden they already carry.</p>
+        <p class="lede">Select a site to see who lives nearby and what they already face. The map zooms to it.</p>
       </div>
+      <div class="chips" id="siteFilter" role="group" aria-label="Filter by status"></div>
       <div class="sitelist" id="sitelist"></div>
     </section>
 
     <section class="pane" id="pane-districts" role="tabpanel" aria-labelledby="tab-districts" hidden>
       <div>
         <h2>Council districts</h2>
-        <p class="lede">Project counts and population-weighted indicators by district. Select a row to zoom the map.</p>
+        <p class="lede">Pick a district. Red numbers show how many pending or approved projects it hosts.</p>
       </div>
-      <div class="scroll-x"><table class="dist" id="disttable"></table></div>
-      <p class="note">Percentiles are statewide from CalEnviroScreen 4.0; 100 is the most burdened tract in California. Surface temperature is the median of nine cloud-free summer Landsat scenes, 2023–2025.</p>
+      <div class="dpick" id="dpick" role="group" aria-label="Council district"></div>
+      <div class="dcard" id="dcard"></div>
+      <details class="more">
+        <summary>Compare all districts</summary>
+        <div class="scroll-x"><table class="grid" id="disttable"></table></div>
+      </details>
     </section>
 
-    <section class="pane" id="pane-index" role="tabpanel" aria-labelledby="tab-index" hidden>
+    <section class="pane" id="pane-beyond" role="tabpanel" aria-labelledby="tab-beyond" hidden>
       <div>
-        <h2>Cumulative burden index</h2>
-        <p class="lede">Each domain ranks San José census tracts from 0 to 100, where 100 is the most burdened tract in the city. Set how much each domain counts and the map recolors.</p>
+        <h2>Beyond San José</h2>
+        <p class="lede">San José is not the first place to weigh this. Here is what California's power prices look like, and what other cities and states have found and done.</p>
       </div>
-      <div class="presets">
-        <button class="btn" data-preset="default">Balanced</button>
-        <button class="btn" data-preset="air">Air &amp; health</button>
-        <button class="btn" data-preset="heat">Heat</button>
-        <button class="btn" data-preset="equal">Equal weights</button>
-      </div>
-      <div class="weights" id="weights"></div>
-      <button class="btn primary" id="showComposite">Show index on map</button>
       <div>
-        <h3>Highest-scoring tracts</h3>
-        <ol class="toplist" id="toplist"></ol>
+        <h3>Household electricity prices, 2015–<span id="latestYear"></span></h3>
+        <p class="hero" id="priceTakeaway" style="font-size:14px;margin-bottom:10px"></p>
+        <div class="legend-row" id="priceLegend"></div>
+        <div class="chart" id="priceChart"></div>
+        <p class="note" style="margin-top:8px">Residential average price, cents per kWh, from the U.S. Energy Information Administration. Prices rise for many reasons, including wildfire costs in California. They are not attributed to data centers here. The point is that any cost shift lands on households already paying the most.</p>
+        <details class="more"><summary>Show the numbers</summary><div class="scroll-x"><table class="grid" id="priceTable"></table></div></details>
+      </div>
+      <div>
+        <h3>California's data center build-out</h3>
+        <div class="stats" id="caFacts" style="grid-template-columns:1fr"></div>
+      </div>
+      <div>
+        <h3>What others have done</h3>
+        <div class="chips" id="scopeFilter" role="group" aria-label="Filter by place" style="margin-bottom:6px"></div>
+        <div class="chips" id="topicFilter" role="group" aria-label="Filter by topic" style="margin-bottom:12px"></div>
+        <div class="prec" id="precedents"></div>
       </div>
     </section>
 
-    <section class="pane" id="pane-sources" role="tabpanel" aria-labelledby="tab-sources" hidden>
+    <section class="pane" id="pane-about" role="tabpanel" aria-labelledby="tab-about" hidden>
       <div>
-        <h2>Sources and methods</h2>
+        <h2>About the data</h2>
         <p class="lede" id="generated"></p>
       </div>
       <dl class="sources" id="sources"></dl>
       <div>
-        <h3>Method notes</h3>
-        <ul class="asks" id="methods"></ul>
+        <h3>How the numbers are made</h3>
+        <ul class="plain" id="methods"></ul>
       </div>
     </section>
   </aside>
 
   <div class="mapwrap">
-    <div id="map" role="region" aria-label="Map of San José census tracts and project sites"></div>
-    <div class="mapctl metric">
-      <label for="metricSel">Color tracts by</label>
-      <select id="metricSel"></select>
-      <p id="metricDesc"></p>
+    <div id="map" role="region" aria-label="Map of San José neighborhoods and data center sites"></div>
+    <div class="mapctl lens" id="lens">
+      <span class="cap">What the map shows</span>
+      <div class="lensgrid" id="lensgrid" role="group" aria-label="Map lens"></div>
+      <p id="lensDesc"></p>
+      <details class="more">
+        <summary>More indicators</summary>
+        <select id="metricSel" aria-label="All indicators"></select>
+      </details>
+      <details class="more">
+        <summary>Adjust the overall score</summary>
+        <div class="chips" id="presets"></div>
+        <div class="weights" id="weights"></div>
+      </details>
     </div>
-    <details class="mapctl layers" id="layersBox" open>
-      <summary>Layers</summary>
+    <details class="mapctl layers" id="layersBox">
+      <summary id="layersSummary">Map layers</summary>
       <div class="opts" id="layerOpts"></div>
     </details>
     <div class="mapctl legend" id="legend"></div>
+    <div class="mapctl key" aria-label="Project status">
+      <span><i class="mark under_review"></i>Under review</span>
+      <span><i class="mark approved"></i>Approved</span>
+      <span><i class="mark existing"></i>Operating</span>
+      <span><i class="mark energy under_review"></i>Large energy user</span>
+    </div>
     <div class="loading" id="loading">Loading map data…</div>
+  </div>
+</div>
+
+<div class="welcome" id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" hidden>
+  <div class="card">
+    <h2 id="welcomeTitle">Who lives next to San José's data centers?</h2>
+    <p>This map combines state health and pollution data, satellite heat readings and the city's own permit list. It shows the neighborhoods around every proposed and approved data center.</p>
+    <ol>
+      <li><div><b>Choose what the map shows</b><span>Use the buttons at the top left to color neighborhoods by overall burden, air pollution, health, heat, income and language, or distance to a data center. Darker means more burdened.</span></div></li>
+      <li><div><b>Click a project site</b><span>See who lives within 1,000 feet, half a mile and a mile, including children, schools and clinics, and what pollution they already breathe.</span></div></li>
+      <li><div><b>Compare districts and other states</b><span>The Districts tab sums up each council district. Beyond San José shows California power prices and what other cities and states have done.</span></div></li>
+    </ol>
+    <div class="row"><button class="btn primary" id="welcomeClose">Start exploring</button></div>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
 "use strict";
-const FILES = ["tracts","sites","districts","city","schools","health","cortese","wetlands","flood",
-               "roads_primary","roads_secondary","water"];
+const FILES = ["tracts","sites","districts","city","schools","health","cortese","wetlands","flood","roads_primary","roads_secondary","water"];
 const D = {};
+const $ = id => document.getElementById(id);
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmt = (v, d = 0) => v == null || Number.isNaN(v) ? "—" : Number(v).toLocaleString("en-US", {maximumFractionDigits: d, minimumFractionDigits: d});
 const toF = c => c == null ? null : c * 9 / 5 + 32;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[ch]));
 const tractName = id => { const t = String(id).slice(-6); return `Tract ${+t.slice(0, 4)}${t.slice(4) === "00" ? "" : "." + t.slice(4)}`; };
+const ordinal = n => { const r = Math.round(n), s = ["th", "st", "nd", "rd"], v = r % 100; return r + (s[(v - 20) % 10] || s[v] || s[0]); };
 const STATUS = {under_review: "Under review", approved: "Approved", existing: "Operating"};
 const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const store = {get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } }};
 
 // Sequential burden ramp, pale to deep; every metric is oriented so darker = more burden.
 const RAMP = ["#fdf0d5", "#fbd39a", "#f6ad6a", "#ec7f4b", "#d4523a", "#a92f34", "#6d1a32"];
 const HEAT_RAMP = ["#fff5c8", "#fec44f", "#ec7014", "#cc2e26", "#800026"]; // matches pipeline/heat.py
 
 const DOMAIN_INFO = {
-  air:       {label: "Air pollution", desc: "Diesel PM, PM2.5, ozone, traffic density"},
-  health:    {label: "Health vulnerability", desc: "Asthma and heart-attack ER visits, low birth weight, adult COPD"},
-  heat:      {label: "Heat exposure", desc: "Summer surface temperature, paved surface, missing tree canopy"},
-  social:    {label: "Social vulnerability", desc: "Poverty, linguistic isolation, education, unemployment, housing burden"},
-  water:     {label: "Water & contamination", desc: "Groundwater threats, drinking water, impaired waters, cleanups, hazardous waste"},
-  proximity: {label: "Proximity to data centers", desc: "100 within ½ mile of a planned, approved or operating facility, fading to 0 at 3 miles"},
+  air:       {label: "Air pollution", short: "Air", desc: "Diesel exhaust, fine particles, ozone and traffic. Data center backup generators run on diesel."},
+  health:    {label: "Health", short: "Health", desc: "Asthma and heart-attack ER visits, low birth weight and adult COPD. Shows who is most harmed by more pollution."},
+  heat:      {label: "Heat", short: "Heat", desc: "Summer ground temperature from satellites, paved surface and missing tree shade."},
+  social:    {label: "Income & language", short: "Income", desc: "Poverty, limited English, education, unemployment and housing costs. Shows who is least able to absorb higher bills or follow hearings."},
+  water:     {label: "Water & toxics", short: "Water", desc: "Groundwater threats, drinking water, polluted waterways, cleanup and hazardous waste sites."},
+  proximity: {label: "Near data centers", short: "Nearby", desc: "Closeness to a planned, approved or operating data center: full score within ½ mile, fading to zero at 3 miles."},
 };
 const PRESETS = {
-  default: {air: 25, health: 20, heat: 15, social: 20, water: 5, proximity: 15},
-  air:     {air: 40, health: 35, heat: 5, social: 10, water: 0, proximity: 10},
-  heat:    {air: 10, health: 15, heat: 45, social: 15, water: 0, proximity: 15},
-  equal:   {air: 10, health: 10, heat: 10, social: 10, water: 10, proximity: 10},
+  Balanced: {air: 25, health: 20, heat: 15, social: 20, water: 5, proximity: 15},
+  "Air & health": {air: 40, health: 35, heat: 5, social: 10, water: 0, proximity: 10},
+  Heat: {air: 10, health: 15, heat: 45, social: 15, water: 0, proximity: 15},
+  Equal: {air: 10, health: 10, heat: 10, social: 10, water: 10, proximity: 10},
 };
-let weights = {...PRESETS.default};
+let weights = {...PRESETS.Balanced};
 
 const SP = "state percentile";
 const METRICS = [
-  {id: "composite", group: "Index", label: "Cumulative burden index", get: p => p._composite, f: v => fmt(v), unit: "index 0–100, your weights",
-   desc: "Weighted blend of the six domains. Adjust the weights in the Burden index tab."},
-  ...Object.entries(DOMAIN_INFO).map(([k, v]) => ({id: "d_" + k, group: "Domains (rank within San José)", label: v.label,
-    get: p => p["d_" + k], f: v => fmt(v), unit: "city rank 0–100", desc: v.desc + ". 100 = most burdened tract in the city."})),
-  {id: "dieselP", group: "Air", label: "Diesel particulate matter", get: p => p.dieselP, f: v => fmt(v), unit: SP,
-   desc: "Diesel PM emissions (CalEnviroScreen 4.0). Data center backup generators burn diesel during testing and outages."},
-  {id: "pmP", group: "Air", label: "Fine particulates (PM2.5)", get: p => p.pmP, f: v => fmt(v), unit: SP, desc: "Annual mean PM2.5 concentration (CalEnviroScreen 4.0)."},
-  {id: "ozoneP", group: "Air", label: "Ozone", get: p => p.ozoneP, f: v => fmt(v), unit: SP, desc: "Summer ozone. Generator NOx is an ozone precursor."},
-  {id: "trafficP", group: "Air", label: "Traffic density", get: p => p.trafficP, f: v => fmt(v), unit: SP, desc: "Traffic volume near the tract (CalEnviroScreen 4.0)."},
-  {id: "asthmaP", group: "Health", label: "Asthma ER visits", get: p => p.asthmaP, f: v => fmt(v), unit: SP, desc: "Age-adjusted asthma emergency visits (CalEnviroScreen 4.0)."},
+  {id: "composite", group: "Overall", label: "Overall burden", get: p => p._composite, f: v => fmt(v), unit: "score 0–100",
+   desc: "Combines air, health, heat, income and language, water and nearness to data centers. You can change the mix under Adjust."},
+  ...Object.entries(DOMAIN_INFO).map(([k, v]) => ({id: "d_" + k, group: "Overall", label: v.label, get: p => p["d_" + k], f: v => fmt(v), unit: "rank in San José, 0–100", desc: v.desc})),
+  {id: "dieselP", group: "Air", label: "Diesel exhaust", get: p => p.dieselP, f: v => fmt(v), unit: SP, desc: "Diesel particulate emissions (CalEnviroScreen 4.0)."},
+  {id: "pmP", group: "Air", label: "Fine particles (PM2.5)", get: p => p.pmP, f: v => fmt(v), unit: SP, desc: "Annual fine particle concentration (CalEnviroScreen 4.0)."},
+  {id: "ozoneP", group: "Air", label: "Ozone", get: p => p.ozoneP, f: v => fmt(v), unit: SP, desc: "Summer ozone. Generator exhaust adds to ozone."},
+  {id: "asthmaP", group: "Health", label: "Asthma ER visits", get: p => p.asthmaP, f: v => fmt(v), unit: SP, desc: "Asthma emergency visits (CalEnviroScreen 4.0)."},
   {id: "cvdP", group: "Health", label: "Heart attack ER visits", get: p => p.cvdP, f: v => fmt(v), unit: SP, desc: "Cardiovascular emergency visits (CalEnviroScreen 4.0)."},
-  {id: "lbwP", group: "Health", label: "Low birth weight", get: p => p.lbwP, f: v => fmt(v), unit: SP, desc: "Low birth-weight infants (CalEnviroScreen 4.0)."},
-  {id: "asthma_adult", group: "Health", label: "Adult asthma prevalence", get: p => p.asthma_adult, f: v => fmt(v, 1) + "%", unit: "% of adults", desc: "CDC PLACES model estimate, area-weighted from 2020 tracts."},
-  {id: "copd", group: "Health", label: "Adult COPD prevalence", get: p => p.copd, f: v => fmt(v, 1) + "%", unit: "% of adults", desc: "CDC PLACES model estimate, area-weighted from 2020 tracts."},
-  {id: "chd", group: "Health", label: "Coronary heart disease", get: p => p.chd, f: v => fmt(v, 1) + "%", unit: "% of adults", desc: "CDC PLACES model estimate."},
-  {id: "lst_c", group: "Heat & land", label: "Summer surface temperature", get: p => toF(p.lst_c), f: v => fmt(v) + "°F", unit: "°F, summer late morning",
-   desc: "Landsat 8/9 land surface temperature, median of 9 cloud-free scenes (Jun–Sep 2023–2025). Turn on Heat imagery to see it at 30 m."},
-  {id: "canopy_pct", group: "Heat & land", label: "Tree canopy", get: p => p.canopy_pct, f: v => fmt(v, 1) + "%", unit: "% canopy cover (darker = less shade)", invert: true,
-   desc: "NLCD 2021 tree canopy. The filings that count trees would remove at least 500."},
-  {id: "imperv_pct", group: "Heat & land", label: "Impervious surface", get: p => p.imperv_pct, f: v => fmt(v) + "%", unit: "% paved or roofed", desc: "NLCD 2021 impervious surface."},
-  {id: "povP", group: "People", label: "Poverty", get: p => p.povP, f: v => fmt(v), unit: SP, desc: "Share of residents below twice the federal poverty level (CalEnviroScreen 4.0)."},
-  {id: "lingP", group: "People", label: "Linguistic isolation", get: p => p.lingP, f: v => fmt(v), unit: SP, desc: "Households where no adult speaks English very well. Standard public notice reaches these residents least."},
-  {id: "housingBP", group: "People", label: "Housing burden", get: p => p.housingBP, f: v => fmt(v), unit: SP, desc: "Low-income households paying over 50% of income for housing. Rate increases for grid upgrades fall hardest here."},
+  {id: "copd", group: "Health", label: "Adult COPD", get: p => p.copd, f: v => fmt(v, 1) + "%", unit: "% of adults", desc: "CDC PLACES estimate."},
+  {id: "asthma_adult", group: "Health", label: "Adult asthma", get: p => p.asthma_adult, f: v => fmt(v, 1) + "%", unit: "% of adults", desc: "CDC PLACES estimate."},
+  {id: "lst_c", group: "Heat & land", label: "Summer ground temperature", get: p => toF(p.lst_c), f: v => fmt(v) + "°F", unit: "°F, late morning", desc: "Landsat 8/9, median of 9 clear summer days, 2023–2025."},
+  {id: "canopy_pct", group: "Heat & land", label: "Tree canopy", get: p => p.canopy_pct, f: v => fmt(v, 1) + "%", unit: "% canopy", invert: true, desc: "NLCD 2021 tree canopy. Darker means less shade."},
+  {id: "imperv_pct", group: "Heat & land", label: "Paved surface", get: p => p.imperv_pct, f: v => fmt(v) + "%", unit: "% paved or roofed", desc: "NLCD 2021 impervious surface."},
+  {id: "povP", group: "People", label: "Poverty", get: p => p.povP, f: v => fmt(v), unit: SP, desc: "Below twice the federal poverty level (CalEnviroScreen 4.0)."},
+  {id: "lingP", group: "People", label: "Limited English", get: p => p.lingP, f: v => fmt(v), unit: SP, desc: "Households where no adult speaks English very well."},
+  {id: "housingBP", group: "People", label: "Housing cost burden", get: p => p.housingBP, f: v => fmt(v), unit: SP, desc: "Low-income households paying over half their income for housing."},
   {id: "Children_under10_pct", group: "People", label: "Children under 10", get: p => p.Children_under10_pct, f: v => fmt(v, 1) + "%", unit: "% of residents", desc: "Children are the most sensitive to diesel exhaust."},
-  {id: "Elderly_65over_pct", group: "People", label: "Adults 65 and older", get: p => p.Elderly_65over_pct, f: v => fmt(v, 1) + "%", unit: "% of residents", desc: "Older adults are the most sensitive to heat and particulates."},
-  {id: "gwthreatsP", group: "Water", label: "Groundwater threats", get: p => p.gwthreatsP, f: v => fmt(v), unit: SP, desc: "Leaking tanks and other sites that threaten groundwater (CalEnviroScreen 4.0)."},
-  {id: "CIscoreP", group: "Overall", label: "CalEnviroScreen 4.0 score", get: p => p.CIscoreP, f: v => fmt(v), unit: SP, desc: "California's official cumulative impact score. The top 25% statewide are SB 535 disadvantaged communities."},
-  {id: "dac", group: "Overall", label: "SB 535 disadvantaged communities", get: p => p.dac ? 1 : 0, f: v => v ? "Yes" : "No", unit: "", categorical: true,
-   desc: "Tracts CalEPA designated disadvantaged in 2022. They are eligible for California Climate Investments."},
+  {id: "Elderly_65over_pct", group: "People", label: "Adults 65+", get: p => p.Elderly_65over_pct, f: v => fmt(v, 1) + "%", unit: "% of residents", desc: "Older adults are the most sensitive to heat and particles."},
+  {id: "CIscoreP", group: "State designations", label: "CalEnviroScreen score", get: p => p.CIscoreP, f: v => fmt(v), unit: SP, desc: "California's official cumulative burden score."},
+  {id: "dac", group: "State designations", label: "SB 535 disadvantaged communities", get: p => p.dac ? 1 : 0, f: v => v ? "Yes" : "No", unit: "", categorical: true,
+   desc: "Neighborhoods California designated disadvantaged in 2022, mostly the top 25% on CalEnviroScreen."},
 ];
 const metricById = Object.fromEntries(METRICS.map(m => [m.id, m]));
+const LENSES = ["composite", "d_air", "d_health", "d_heat", "d_social", "d_proximity"];
+const LENS_LABEL = {composite: "Overall burden", d_air: "Air pollution", d_health: "Health", d_heat: "Heat", d_social: "Income & language", d_proximity: "Near data centers"};
 let metric = metricById.composite;
 
 /* ---------- load ---------- */
 Promise.all([...FILES.map(f => fetch(`data/${f}.geojson`).then(r => r.json()).then(j => { D[f] = j; })),
              fetch("data/summary.json").then(r => r.json()).then(j => { D.summary = j; }),
-             fetch("data/lst_bounds.json").then(r => r.json()).then(j => { D.lst = j; })])
+             fetch("data/lst_bounds.json").then(r => r.json()).then(j => { D.lst = j; }),
+             fetch("data/context.json").then(r => r.json()).then(j => { D.ctx = j; })])
   .then(init)
-  .catch(err => { document.getElementById("loading").textContent = `The map data did not load (${err.message}). Serve the web folder over http, as the README describes, and reload.`; });
+  .catch(err => { $("loading").textContent = `The map data did not load (${err.message}). Serve the web folder over http, as the README describes, and reload.`; });
 
-let map, tractLayer, districtLayer, labelLayer, ringLayer, lstImage;
+let map, tractLayer, districtLayer, labelLayer, ringLayer, lstImage, districtHi;
 const overlays = {}, siteMarkers = [];
 
 function init() {
@@ -424,7 +513,6 @@ function init() {
 
   overlays.water = L.geoJSON(D.water, {pane: "base", interactive: false, style: () => ({stroke: false, fillColor: cssVar("--water"), fillOpacity: 1})}).addTo(map);
   lstImage = L.imageOverlay("data/lst.png", D.lst.bounds, {pane: "base", opacity: .9, interactive: false});
-
   tractLayer = L.geoJSON(D.tracts, {pane: "tracts", style: tractStyle, onEachFeature: (f, l) => {
     l.on("click", e => L.popup({maxWidth: 320}).setLatLng(e.latlng).setContent(tractPopup(f.properties)).openOn(map));
     l.on("mouseover", () => l.setStyle({weight: 2, color: cssVar("--ink")}));
@@ -456,9 +544,8 @@ function init() {
   });
   D.sites.features.forEach((f, i) => {
     const p = f.properties;
-    const cls = `sitepin ${p.status}${p.kind === "large_energy" ? " energy" : ""}`;
     const m = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]], {
-      icon: L.divIcon({className: "", html: `<div class="${cls}" data-i="${i}"></div>`, iconSize: [20, 20], iconAnchor: [10, 10]}),
+      icon: L.divIcon({className: "", html: `<div class="sitepin ${p.status}${p.kind === "large_energy" ? " energy" : ""}" data-i="${i}"></div>`, iconSize: [20, 20], iconAnchor: [10, 10]}),
       zIndexOffset: p.status === "existing" ? 0 : 500, title: p.address, alt: p.address});
     m.on("click", () => { selectTab("sites"); openSite(i, true); });
     m.bindTooltip(`${esc(p.address)} · ${STATUS[p.status]}${p.mw ? " · " + p.mw + " MW" : ""}`, {direction: "top", offset: [0, -10]});
@@ -467,29 +554,37 @@ function init() {
   overlays.sites = L.layerGroup(siteMarkers);
 
   map.fitBounds(L.geoJSON(D.city).getBounds(), {padding: [10, 10]});
-  buildMetricSelect(); buildLayerToggles(); buildBrief(); buildSites(); buildDistricts(); buildWeights(); buildSources();
-  document.getElementById("loading").hidden = true;
+  buildLens(); buildLayerToggles(); buildOverview(); buildSites(); buildDistricts(); buildBeyond(); buildAbout();
+  setMetric("composite");
+  $("loading").hidden = true;
   if (location.hash) selectTab(location.hash.slice(1));
+  if (!store.get("sjdc-welcome-seen")) openWelcome();
 
-  // repaint map colors when the viewer's theme changes
   const restyle = () => {
     tractLayer.setStyle(tractStyle);
     [overlays.water, overlays.roads1, overlays.roads1case, overlays.roads2, overlays.dac, districtLayer].forEach(o => o.setStyle(o.options.style));
-    renderLegend();
+    renderLegend(); drawPriceChart();
   };
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", restyle);
   new MutationObserver(restyle).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
 }
+
+/* ---------- welcome ---------- */
+function openWelcome() { $("welcome").hidden = false; $("welcomeClose").focus(); }
+function closeWelcome() { $("welcome").hidden = true; store.set("sjdc-welcome-seen", "1"); }
+$("helpBtn").addEventListener("click", openWelcome);
+$("welcomeClose").addEventListener("click", closeWelcome);
+$("welcome").addEventListener("click", e => { if (e.target.id === "welcome") closeWelcome(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("welcome").hidden) closeWelcome(); });
 
 /* ---------- choropleth ---------- */
 let breaks = [];
 const heatOn = () => lstImage && map && map.hasLayer(lstImage);
 function computeComposite() {
   const tot = Object.values(weights).reduce((a, b) => a + b, 0) || 1;
-  D.tracts.features.forEach(f => {
-    const p = f.properties;
-    p._composite = Object.entries(weights).reduce((s, [k, w]) => s + w * (p["d_" + k] ?? 0), 0) / tot;
-  });
+  D.tracts.features.forEach(f => { const p = f.properties; p._composite = Object.entries(weights).reduce((s, [k, w]) => s + w * (p["d_" + k] ?? 0), 0) / tot; });
+  const sorted = D.tracts.features.map(f => f.properties._composite).sort((a, b) => a - b);
+  D.tracts.features.forEach(f => { f.properties._compRank = 100 * sorted.filter(v => v < f.properties._composite).length / sorted.length; });
 }
 function metricValues() { return D.tracts.features.map(f => metric.get(f.properties)).filter(v => v != null).sort((a, b) => a - b); }
 function computeBreaks() {
@@ -510,43 +605,67 @@ function tractStyle(f) {
 }
 function setMetric(id) {
   metric = metricById[id];
-  document.getElementById("metricSel").value = id;
-  document.getElementById("metricDesc").textContent = metric.desc;
+  $("metricSel").value = id;
+  $("lensDesc").textContent = metric.desc;
+  document.querySelectorAll("#lensgrid button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === id)));
+  if (heatOn()) setLayer("heat", false);
   computeBreaks(); tractLayer.setStyle(tractStyle); renderLegend();
 }
 function renderLegend() {
-  const el = document.getElementById("legend");
+  const el = $("legend");
   if (heatOn()) {
-    el.innerHTML = `<b>Summer surface temperature</b><span class="unit">Landsat, 30 m pixels</span>
-      <div class="ramp">${HEAT_RAMP.map(c => `<i style="background:${c};width:39px"></i>`).join("")}</div>
-      <div class="ramp-labels"><span>${fmt(toF(D.lst.min_c))}°F or less</span><span>${fmt(toF(D.lst.max_c))}°F+</span></div>`;
+    el.innerHTML = `<b>Summer ground temperature</b><div class="ramp">${HEAT_RAMP.map(c => `<i style="background:${c}"></i>`).join("")}</div>
+      <div class="ramp-ends"><span class="num">${fmt(toF(D.lst.min_c))}°F</span><span class="num">${fmt(toF(D.lst.max_c))}°F</span></div>`;
     return;
   }
   if (metric.categorical) {
     el.innerHTML = `<b>${esc(metric.label)}</b><div><span class="swatch" style="background:${RAMP[5]}"></span>Designated &nbsp; <span class="swatch" style="background:${RAMP[0]}"></span>Not designated</div>`;
     return;
   }
+  // The ramp always runs less → more burdened; for inverted metrics (canopy) the raw values run high → low.
   const vals = metricValues();
-  const cols = metric.invert ? [...RAMP].reverse() : RAMP;
-  el.innerHTML = `<b>${esc(metric.label)}</b><span class="unit">${esc(metric.unit)} · 7 equal-count tract groups</span>
-    <div class="ramp">${cols.map(c => `<i style="background:${c}"></i>`).join("")}</div>
-    <div class="ramp-labels"><span>${metric.f(vals[0])}</span><span>${metric.f(vals[Math.floor(vals.length / 2)])}</span><span>${metric.f(vals[vals.length - 1])}</span></div>`;
-}
-function buildMetricSelect() {
-  const sel = document.getElementById("metricSel");
-  const groups = {};
-  METRICS.forEach(m => (groups[m.group] ??= []).push(m));
-  sel.innerHTML = Object.entries(groups).map(([g, ms]) => `<optgroup label="${esc(g)}">${ms.map(m => `<option value="${m.id}">${esc(m.label)}</option>`).join("")}</optgroup>`).join("");
-  sel.addEventListener("change", () => setMetric(sel.value));
-  setMetric("composite");
+  const raw = !metric.id.startsWith("d_") && metric.id !== "composite";
+  const [lo, hi] = metric.invert ? [vals[vals.length - 1], vals[0]] : [vals[0], vals[vals.length - 1]];
+  el.innerHTML = `<b>${esc(metric.label)}</b>
+    <div class="ramp">${RAMP.map(c => `<i style="background:${c}"></i>`).join("")}</div>
+    <div class="ramp-ends"><span>Less burdened</span><span>More burdened</span></div>
+    ${raw ? `<div class="ramp-ends"><span class="num">${metric.f(lo)}</span><span style="font-size:10.5px">${esc(metric.unit)}</span><span class="num">${metric.f(hi)}</span></div>` : ""}`;
 }
 
-/* ---------- layer toggles ---------- */
-const LAYER_DEFS = [
-  ["sites", "Project sites", true], ["rings", "1-mile and 1,000-ft rings", false], ["districts", "Council districts", true],
-  ["dac", "SB 535 tracts (dashed)", false], ["heat", "Heat imagery (30 m)", false], ["schools", "Public schools", false],
-  ["health", "Hospitals & care facilities", false], ["flood", "FEMA 100-year flood zone", false], ["wetlands", "Wetlands", false],
-  ["cortese", "Cortese hazardous sites", false], ["roads", "Roads", true],
+/* ---------- lens card ---------- */
+function buildLens() {
+  $("lensgrid").innerHTML = LENSES.map(id => `<button data-m="${id}" aria-pressed="false">${LENS_LABEL[id]}</button>`).join("");
+  $("lensgrid").querySelectorAll("button").forEach(b => b.addEventListener("click", () => setMetric(b.dataset.m)));
+  const groups = {};
+  METRICS.forEach(m => (groups[m.group] ??= []).push(m));
+  $("metricSel").innerHTML = Object.entries(groups).map(([g, ms]) => `<optgroup label="${esc(g)}">${ms.map(m => `<option value="${m.id}">${esc(m.label)}</option>`).join("")}</optgroup>`).join("");
+  $("metricSel").addEventListener("change", e => setMetric(e.target.value));
+
+  $("presets").innerHTML = Object.keys(PRESETS).map(k => `<button class="chip" data-p="${esc(k)}" aria-pressed="${k === "Balanced"}">${esc(k)}</button>`).join("");
+  $("weights").innerHTML = Object.entries(DOMAIN_INFO).map(([k, v]) => `<div class="weight">
+    <label for="w-${k}"><span>${v.label}</span><span class="num" id="wv-${k}"></span></label>
+    <input type="range" id="w-${k}" min="0" max="50" step="1" value="${weights[k]}"></div>`).join("");
+  const showShares = () => {
+    const tot = Object.values(weights).reduce((a, b) => a + b, 0) || 1;
+    Object.keys(weights).forEach(k => { $(`w-${k}`).value = weights[k]; $(`wv-${k}`).textContent = Math.round(100 * weights[k] / tot) + "%"; });
+  };
+  const sync = (preset = null) => {
+    showShares();
+    document.querySelectorAll("#presets .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.p === preset)));
+    computeComposite();
+    if (metric.id !== "composite") setMetric("composite"); else { computeBreaks(); tractLayer.setStyle(tractStyle); renderLegend(); }
+  };
+  Object.keys(weights).forEach(k => $(`w-${k}`).addEventListener("input", e => { weights[k] = +e.target.value; sync(); }));
+  document.querySelectorAll("#presets .chip").forEach(c => c.addEventListener("click", () => { weights = {...PRESETS[c.dataset.p]}; sync(c.dataset.p); }));
+  showShares();
+}
+
+/* ---------- layers ---------- */
+const LAYER_GROUPS = [
+  ["Projects", [["sites", "Project sites", true], ["rings", "1-mile and 1,000-ft rings", false]]],
+  ["People & places", [["schools", "Public schools", false], ["health", "Hospitals & care facilities", false]]],
+  ["Environment", [["heat", "Satellite heat image", false], ["flood", "100-year flood zone", false], ["wetlands", "Wetlands", false], ["cortese", "State hazardous sites", false]]],
+  ["Boundaries", [["districts", "Council districts", true], ["dac", "SB 535 communities (dashed)", false], ["roads", "Freeways & major roads", true]]],
 ];
 function layersFor(id) {
   return {sites: [overlays.sites], rings: [ringLayer], districts: [districtLayer, labelLayer], dac: [overlays.dac], heat: [lstImage],
@@ -554,35 +673,37 @@ function layersFor(id) {
     cortese: [overlays.cortese], roads: [overlays.roads2, overlays.roads1case, overlays.roads1]}[id];
 }
 function buildLayerToggles() {
-  const box = document.getElementById("layerOpts");
-  box.innerHTML = LAYER_DEFS.map(([id, label, on]) => `<label><input type="checkbox" id="lyr-${id}" ${on ? "checked" : ""}> ${label}</label>`).join("");
-  LAYER_DEFS.forEach(([id]) => document.getElementById(`lyr-${id}`).addEventListener("change", e => {
+  $("layerOpts").innerHTML = LAYER_GROUPS.map(([g, items]) => `<span class="grp">${g}</span>` +
+    items.map(([id, label, on]) => `<label><input type="checkbox" id="lyr-${id}" ${on ? "checked" : ""}> ${label}</label>`).join("")).join("");
+  LAYER_GROUPS.flatMap(([, items]) => items).forEach(([id]) => $(`lyr-${id}`).addEventListener("change", e => {
     layersFor(id).forEach(l => e.target.checked ? l.addTo(map) : map.removeLayer(l));
     if (id === "heat") { tractLayer.setStyle(tractStyle); renderLegend(); }
+    updateLayerSummary();
   }));
-  if (matchMedia("(max-width: 820px)").matches) document.getElementById("layersBox").open = false;
+  updateLayerSummary();
+}
+function updateLayerSummary() {
+  $("layersSummary").textContent = `Map layers (${document.querySelectorAll("#layerOpts input:checked").length} on)`;
 }
 function setLayer(id, on) {
-  const el = document.getElementById(`lyr-${id}`);
+  const el = $(`lyr-${id}`);
   if (el.checked !== on) { el.checked = on; el.dispatchEvent(new Event("change")); }
 }
 
 /* ---------- tract popup ---------- */
 function tractPopup(p) {
-  const bars = Object.entries(DOMAIN_INFO).map(([k, v]) => `<div class="dbar"><span>${v.label.replace(" to data centers", "")}</span><i><s style="width:${p["d_" + k] ?? 0}%"></s></i><b>${fmt(p["d_" + k])}</b></div>`).join("");
+  const stand = Object.entries(DOMAIN_INFO).filter(([k]) => k !== "proximity" && p["d_" + k] >= 75).map(([, v]) => v.label.toLowerCase());
+  const bars = Object.entries(DOMAIN_INFO).map(([k, v]) => `<div class="dbar"><span>${v.short}</span><i><s style="width:${p["d_" + k] ?? 0}%"></s></i><b>${fmt(p["d_" + k])}</b></div>`).join("");
   const row = (l, v) => `<div class="row"><span>${l}</span><b>${v}</b></div>`;
-  return `<div class="pop"><h4>${tractName(p.tract)}</h4>
+  const metricRow = metric.id === "composite" || metric.id.startsWith("d_") ? "" : row(esc(metric.label), metric.f(metric.get(p)));
+  return `<div class="pop"><h4>${tractName(p.tract)} · District ${esc(p.district)}</h4>
     <div class="sub">${fmt(p.pop)} residents${p.dac ? " · SB 535 disadvantaged community" : ""}</div>
-    ${metric.id !== "composite" ? row(esc(metric.label), metric.f(metric.get(p))) : ""}
-    ${row("Burden index (current weights)", fmt(p._composite))}
-    <div class="cap">Rank within San José (100 = worst)</div>
-    <div style="display:flex;flex-direction:column;gap:3px">${bars}</div>
-    <div class="cap">Indicators</div>
-    ${row("Diesel PM, state pctile", fmt(p.dieselP))}
-    ${row("Asthma ER visits, state pctile", fmt(p.asthmaP))}
-    ${row("Summer surface temp", fmt(toF(p.lst_c)) + "°F")}
-    ${row("Tree canopy", fmt(p.canopy_pct, 1) + "%")}
-    ${row("Poverty, state pctile", fmt(p.povP))}
+    <p class="lead">Overall burden is higher than <b>${fmt(p._compRank)}%</b> of San José neighborhoods.</p>
+    <p class="stand">${stand.length ? "Stands out for " + stand.join(", ") + "." : "No single issue in the city's worst quarter."}</p>
+    <div style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px">${bars}</div>
+    ${metricRow}
+    ${row("Diesel exhaust", ordinal(p.dieselP) + " state pctile")}
+    ${row("Summer ground temp", fmt(toF(p.lst_c)) + "°F")}
     ${row("Nearest data center", fmt(p.dc_dist_mi, 1) + " mi")}</div>`;
 }
 
@@ -598,91 +719,108 @@ function popMean(key) {
   D.tracts.features.forEach(f => { const v = f.properties[key]; if (v != null) { s += v * f.properties.pop; w += f.properties.pop; } });
   return s / w;
 }
-const ordinal = n => { const r = Math.round(n), s = ["th", "st", "nd", "rd"], v = r % 100; return r + (s[(v - 20) % 10] || s[v] || s[0]); };
 
-/* ---------- brief ---------- */
-function buildBrief() {
+/* ---------- overview ---------- */
+function buildOverview() {
   const S = D.summary;
   const planned = D.sites.features.map(f => f.properties).filter(p => p.status !== "existing");
   const dcs = planned.filter(p => p.kind === "data_center");
+  const byDist = {};
+  planned.forEach(p => (byDist[p.district] ??= []).push(p));
+  const distList = Object.keys(byDist).sort((a, b) => a - b);
+  $("hero").innerHTML = `San José has <b>${dcs.length} data centers</b> approved or under review, all in <b>${distList.length} of 10 council districts</b>. About <b>${fmt(Math.round(S.pop_within_1mi / 1000))},000 people</b> live within a mile of a pending or approved project.`;
+  document.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => {
+    selectTab(b.dataset.go);
+    if (b.dataset.go === "sites") { setLayer("rings", true); map.fitBounds(L.featureGroup(siteMarkers).getBounds(), {padding: [40, 40]}); }
+  }));
   const withGen = planned.filter(p => p.generators).length;
   const withCooling = dcs.filter(p => p.cooling).length;
   const stat = (b, s) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`;
-  document.getElementById("stats").innerHTML = [
-    stat(`${S.n_review_dc} + ${S.n_approved_dc}`, "data centers under review + approved, plus 2 non-data-center large energy users"),
-    stat(`${fmt(S.mw_known_total)} MW`, `stated load in the ${planned.length - S.n_mw_unstated} filings that give one. ${S.n_mw_unstated} filings state none`),
-    stat(fmt(S.pop_within_1mi), "residents within 1 mile of a pending or approved site"),
-    stat(`${S.schools_within_1mi}`, `public schools within 1 mile, enrolling ${fmt(S.students_within_1mi)} students`),
-    stat(fmt(S.trees_removed_known), "trees removed, in the filings that count them"),
-    stat(fmt(S.generators_known), `standby generators, counted in only ${withGen} filings`),
+  $("stats").innerHTML = [
+    stat(`${S.n_review_dc} + ${S.n_approved_dc}`, "data centers under review + approved"),
+    stat(fmt(S.pop_within_1mi), "residents within 1 mile of a project"),
+    stat(`${S.schools_within_1mi}`, `public schools within 1 mile (${fmt(S.students_within_1mi)} students)`),
+    stat(`${fmt(S.mw_known_total)} MW`, `stated power load. ${S.n_mw_unstated} of ${planned.length} filings give no figure`),
   ].join("");
 
   const dieselMed = popMedian("dieselP"), asthmaMed = popMedian("asthmaP");
   const aboveDiesel = dcs.filter(p => p.rings.mi1.w_dieselP > dieselMed).length;
   const aboveAsthma = dcs.filter(p => p.rings.mi1.w_asthmaP > asthmaMed).length;
-  const byDist = {};
-  planned.forEach(p => (byDist[p.district] ??= []).push(p));
-  const distList = Object.keys(byDist).sort((a, b) => a - b);
   const nearDac = planned.filter(p => p.rings.mi1.dac_pop_pct > 0).length;
-  const cityTemp = toF(popMean("lst_c"));
-  const siteTemp = toF(planned.reduce((a, p) => a + p.rings.mi1.w_lst_c, 0) / planned.length);
   const d3 = D.districts.features.find(f => f.properties.district === "3")?.properties;
   const downtown = dcs.filter(p => p.district === "3");
-  const downtownPop = downtown.length ? Math.max(...downtown.map(p => p.rings.mi1.pop)) : 0;
   const nextToHomes = dcs.filter(p => /residential|homes|units/i.test(p.summary)).length;
-
-  const items = [
-    `All ${planned.length} pending and approved projects are in ${distList.length} of the 10 council districts (${distList.map(d => `D${d}: ${byDist[d].length}`).join(", ")}). Six districts host none.`,
-    `${aboveDiesel} of ${dcs.length} data center sites have neighbors within 1 mile who already breathe more diesel exhaust than the typical San José resident. The citywide median is the ${ordinal(dieselMed)} state percentile. Backup generators would add to that load.`,
-    `${aboveAsthma} of ${dcs.length} data center sites are surrounded by tracts with asthma emergency-visit rates above the city median.`,
-    d3 && downtown.length ? `District 3 (downtown) has ${downtown.length} data center proposals. ${fmt(d3.dac_pop_pct)}% of its residents live in SB 535 disadvantaged tracts, and its diesel PM burden is at the ${ordinal(d3.w_dieselP)} state percentile. Up to ${fmt(downtownPop)} people live within a mile of a single downtown site.` : "",
-    nextToHomes ? `${nextToHomes} data center proposals share a project with new apartment towers, so generator yards and cooling equipment would sit beside future homes.` : "",
-    `${nearDac} of ${planned.length} projects are within 1 mile of an SB 535 disadvantaged community.`,
-    heatSentence(siteTemp, cityTemp, planned),
+  const ca = D.ctx.focus.find(s => s.code === "CA"), us = D.ctx.us;
+  const caLast = ca.prices[ca.prices.length - 1], usLast = us.prices[us.prices.length - 1];
+  const top = [
+    aboveDiesel === dcs.length
+      ? `Every one of the ${dcs.length} data center sites has neighbors who already breathe more diesel exhaust than the typical San José resident. Backup generators burn diesel.`
+      : `${aboveDiesel} of ${dcs.length} data center sites have neighbors who already breathe more diesel exhaust than the typical San José resident. Backup generators burn diesel.`,
+    `Six districts host no projects. The ${planned.length} pending and approved projects are split ${distList.map(d => `D${d}: ${byDist[d].length}`).join(", ")}.`,
+    d3 && downtown.length ? `Downtown District 3 has ${downtown.length} data center proposals, and ${fmt(d3.dac_pop_pct)}% of its residents live in state-designated disadvantaged neighborhoods.` : null,
+    `California households already pay ${fmt(caLast, 1)}¢ per kWh, the highest rate in the continental U.S. and ${fmt(caLast / usLast, 1)} times the national average. Any data center cost shift lands on them.`,
   ].filter(Boolean);
-  document.getElementById("findings").innerHTML = items.map(t => `<li>${t}</li>`).join("");
-
-  document.getElementById("asks").innerHTML = [
-    `Power: ${S.n_mw_unstated} of ${planned.length} filings state no electrical load. San José's deal with PG&amp;E reserves ${S.pge_deal_mw} MW for large projects, about 80% of the city's current use.`,
-    `Generators: only ${withGen} filings count them. Each site needs the number, engine tier, fuel, permitted testing hours and a BAAQMD health risk assessment.`,
-    `Water: only ${withCooling} of ${dcs.length} data center filings name a cooling method, and none of them states daily water use.`,
+  const more = [
+    `${aboveAsthma} of ${dcs.length} data center sites are surrounded by neighborhoods with above-median asthma emergency visits.`,
+    nextToHomes ? `${nextToHomes} downtown proposals share a project with new apartment towers, so generators and cooling equipment would sit beside future homes.` : null,
+    `${nearDac} of ${planned.length} projects are within a mile of a state-designated disadvantaged community.`,
+    heatSentence(planned),
+    "Indianapolis, Imperial County and Tucson have paused or stopped data centers while rules are written. See Beyond San José.",
+  ].filter(Boolean);
+  $("findings").innerHTML = top.map(t => `<li>${t}</li>`).join("");
+  $("findings2").innerHTML = more.map(t => `<li>${t}</li>`).join("");
+  $("asks").innerHTML = [
+    `Power: ${S.n_mw_unstated} of ${planned.length} filings state no electrical load. The city's PG&amp;E deal reserves ${S.pge_deal_mw} MW, about 80% of today's citywide use.`,
+    `Generators: only ${withGen} filings count them. Each site needs the number, engine type, permitted testing hours and an air district health risk assessment.`,
+    `Water: only ${withCooling} of ${dcs.length} data center filings name a cooling method, and none states daily water use.`,
     "Noise: modeled levels from chillers, fans and generator tests at the nearest home and school.",
-    "Ratepayers: who pays for substations and transmission upgrades if projects use less power than they reserved.",
+    "Bills: who pays for substations and power lines if a project uses less power than it reserved.",
   ].map(t => `<li>${t}</li>`).join("");
 }
-
-// Say what the heat data actually shows: hotter, cooler or about the same as the city.
-function heatSentence(siteTemp, cityTemp, planned) {
-  const canopySite = planned.reduce((a, p) => a + p.rings.mi1.w_canopy_pct, 0) / planned.length;
-  const canopyCity = popMean("canopy_pct");
-  const trees = D.summary.trees_removed_known;
+function heatSentence(planned) {
+  const siteTemp = toF(planned.reduce((a, p) => a + p.rings.mi1.w_lst_c, 0) / planned.length), cityTemp = toF(popMean("lst_c"));
+  const canopySite = planned.reduce((a, p) => a + p.rings.mi1.w_canopy_pct, 0) / planned.length, canopyCity = popMean("canopy_pct");
   const diff = siteTemp - cityTemp;
-  const temp = Math.abs(diff) < 1.5
-    ? `The land within 1 mile of the projects is about as hot as the city overall on summer mornings (${fmt(siteTemp)}°F surface temperature vs ${fmt(cityTemp)}°F).`
-    : `The land within 1 mile of the projects averages ${fmt(siteTemp)}°F surface temperature on summer mornings, ${fmt(Math.abs(diff))}°F ${diff > 0 ? "hotter" : "cooler"} than the city overall (${fmt(cityTemp)}°F).`;
-  return `${temp} Tree canopy there averages ${fmt(canopySite, 1)}%, against ${fmt(canopyCity, 1)}% citywide, and the filings would remove at least ${fmt(trees)} more trees.`;
+  const temp = Math.abs(diff) < 1.5 ? `Land within a mile of the projects is about as hot as the city overall on summer mornings (${fmt(siteTemp)}°F vs ${fmt(cityTemp)}°F).`
+    : `Land within a mile of the projects is ${fmt(Math.abs(diff))}°F ${diff > 0 ? "hotter" : "cooler"} than the city overall on summer mornings.`;
+  return `${temp} It has less shade, though: ${fmt(canopySite, 1)}% tree canopy against ${fmt(canopyCity, 1)}% citywide, and the filings would remove at least ${fmt(D.summary.trees_removed_known)} more trees.`;
 }
 
 /* ---------- sites ---------- */
+let siteFilter = "all";
 function buildSites() {
+  const counts = {all: D.sites.features.length};
+  D.sites.features.forEach(f => { counts[f.properties.status] = (counts[f.properties.status] || 0) + 1; });
+  const opts = [["all", "All"], ["under_review", "Under review"], ["approved", "Approved"], ["existing", "Operating"]];
+  $("siteFilter").innerHTML = opts.map(([k, l]) => `<button class="chip" data-f="${k}" aria-pressed="${k === "all"}">${l}<span class="n">${counts[k] || 0}</span></button>`).join("");
+  $("siteFilter").querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => setSiteFilter(c.dataset.f)));
+  renderSiteList();
+}
+function setSiteFilter(f) {
+  siteFilter = f;
+  $("siteFilter").querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.f === f)));
+  renderSiteList();
+}
+function renderSiteList() {
   const order = {under_review: 0, approved: 1, existing: 2};
   const items = D.sites.features.map((f, i) => ({p: f.properties, i}))
-    .sort((a, b) => order[a.p.status] - order[b.p.status] || (a.p.kind === "large_energy") - (b.p.kind === "large_energy") || (b.p.mw || 0) - (a.p.mw || 0));
-  document.getElementById("sitelist").innerHTML = items.map(({p, i}) => `
+    .filter(({p}) => siteFilter === "all" || p.status === siteFilter)
+    .sort((a, b) => order[a.p.status] - order[b.p.status] || (a.p.kind === "large_energy") - (b.p.kind === "large_energy") || b.p.rings.mi1.pop - a.p.rings.mi1.pop);
+  $("sitelist").innerHTML = items.map(({p, i}) => `
     <div class="site" id="site-${i}">
       <button aria-expanded="false" data-i="${i}">
         <i class="mark ${p.status}${p.kind === "large_energy" ? " energy" : ""}"></i>
         <span class="addr">${esc(p.address)}</span>
         <span class="pill ${p.status}">${STATUS[p.status]}</span>
-        <span class="meta">${[p.file, p.operator, `District ${p.district}`, p.mw ? `${p.mw} MW` : p.status !== "existing" ? "MW not stated" : null,
-          p.kind === "large_energy" ? "large energy user, not a data center" : null].filter(Boolean).map(esc).join(" · ")}</span>
+        <span class="meta">District ${esc(p.district)} · ${fmt(p.rings.mi1.pop)} people within 1 mile${p.rings.mi1.schools ? ` · ${p.rings.mi1.schools} school${p.rings.mi1.schools > 1 ? "s" : ""}` : ""}${p.kind === "large_energy" ? " · not a data center" : ""}</span>
       </button>
       <div class="body" hidden></div>
     </div>`).join("");
   document.querySelectorAll(".site>button").forEach(b => b.addEventListener("click", () => openSite(+b.dataset.i, false)));
 }
 function openSite(i, fromMap) {
-  const el = document.getElementById(`site-${i}`);
+  if (!$(`site-${i}`)) setSiteFilter("all");
+  const el = $(`site-${i}`);
   const wasOpen = el.classList.contains("open");
   document.querySelectorAll(".site.open").forEach(s => { s.classList.remove("open"); s.querySelector(".body").hidden = true; s.querySelector("button").setAttribute("aria-expanded", "false"); });
   document.querySelectorAll(".sitepin.sel").forEach(s => s.classList.remove("sel"));
@@ -701,135 +839,203 @@ function openSite(i, fromMap) {
 function siteBody(p) {
   const r = p.rings;
   const kv = (l, v) => `<div><dt>${l}</dt><dd class="${v == null ? "na" : ""}">${v == null ? "not stated" : v}</dd></div>`;
-  const med = Object.fromEntries(["dieselP", "asthmaP", "CIscoreP", "povP", "lst_c", "canopy_pct"].map(k => [k, popMedian(k)]));
-  const cell = (v, key, d = 0, conv = x => x, lowIsWorse = false) => {
-    const bad = v != null && (lowIsWorse ? v < med[key] : v > med[key]);
-    return `<td class="${bad ? "hi" : ""}">${fmt(conv(v), d)}</td>`;
-  };
-  const rows = [
-    ["Residents", k => `<td>${fmt(r[k].pop)}</td>`],
-    ["Children under 10", k => `<td>${fmt(r[k].kids)}</td>`],
-    ["Adults 65+", k => `<td>${fmt(r[k].elders)}</td>`],
-    ["Public schools (students)", k => `<td>${r[k].schools}${r[k].students ? ` (${fmt(r[k].students)})` : ""}</td>`],
-    ["Hospitals & care facilities", k => `<td>${r[k].health}</td>`],
-    ["Residents in SB 535 tracts", k => `<td>${fmt(r[k].dac_pop_pct)}%</td>`],
-    ["Diesel PM, state pctile", k => cell(r[k].w_dieselP, "dieselP")],
-    ["Asthma ER, state pctile", k => cell(r[k].w_asthmaP, "asthmaP")],
-    ["CalEnviroScreen, state pctile", k => cell(r[k].w_CIscoreP, "CIscoreP")],
-    ["Poverty, state pctile", k => cell(r[k].w_povP, "povP")],
-    ["Summer surface temp, °F", k => cell(r[k].w_lst_c, "lst_c", 0, toF)],
-    ["Tree canopy, %", k => cell(r[k].w_canopy_pct, "canopy_pct", 1, x => x, true)],
-  ];
+  const med = Object.fromEntries(["dieselP", "asthmaP", "povP", "lst_c", "canopy_pct"].map(k => [k, popMedian(k)]));
+  const cell = (v, key, d = 0, conv = x => x, lowIsWorse = false) => `<td class="${v != null && (lowIsWorse ? v < med[key] : v > med[key]) ? "hi" : ""}">${fmt(conv(v), d)}</td>`;
+  const rings = ["ft1000", "mi05", "mi1"];
+  const table = (caption, rows) => `<div class="scroll-x"><table class="grid"><caption>${caption}</caption><thead><tr><th></th><th>1,000 ft</th><th>½ mile</th><th>1 mile</th></tr></thead>
+    <tbody>${rows.map(([l, fn]) => `<tr><td>${l}</td>${rings.map(fn).join("")}</tr>`).join("")}</tbody></table></div>`;
   const flags = [];
-  if (p.in_flood_zone) flags.push(["warn", "Inside the FEMA 100-year flood zone"]);
-  else if (p.flood_within_1000ft) flags.push(["", "FEMA flood zone within 1,000 ft"]);
+  if (p.in_flood_zone) flags.push(["warn", "Inside the 100-year flood zone"]);
+  else if (p.flood_within_1000ft) flags.push(["", "Flood zone within 1,000 ft"]);
+  if (p.host_dac) flags.push(["warn", "Inside a state-designated disadvantaged community"]);
+  if (p.res_zoned_1000ft > 0) flags.push(["warn", `${fmt(p.res_zoned_1000ft)}% of land within 1,000 ft zoned residential`]);
+  if (p.mixed_zoned_1000ft > 0) flags.push(["", `${fmt(p.mixed_zoned_1000ft)}% within 1,000 ft zoned for mixed use that allows housing`]);
   if (r.mi1.wetland_acres > 0) flags.push([r.mi1.wetland_acres > 50 ? "warn" : "", `${fmt(r.mi1.wetland_acres)} acres of wetland within 1 mile`]);
-  if (p.res_zoned_1000ft > 0) flags.push(["warn", `${fmt(p.res_zoned_1000ft)}% of land within 1,000 ft is zoned residential`]);
-  if (p.mixed_zoned_1000ft > 0) flags.push(["", `${fmt(p.mixed_zoned_1000ft)}% within 1,000 ft is mixed-use or downtown zoning that allows housing`]);
-  if (p.host_dac) flags.push(["warn", "Sited inside an SB 535 disadvantaged community"]);
-  if (r.mi1.cortese) flags.push(["", `${r.mi1.cortese} Cortese-list hazardous site(s) within 1 mile`]);
-  flags.push(["", `Nearest public school: ${esc(p.nearest_school.name)}, ${fmt(p.nearest_school.ft / 5280, 2)} mi`]);
+  flags.push(["", `Nearest school: ${esc(p.nearest_school.name)}, ${fmt(p.nearest_school.ft / 5280, 2)} mi`]);
   return `
     <p style="margin:0">${esc(p.summary)}</p>
     <dl class="kv">
-      ${kv("Electrical load", p.mw ? p.mw + " MW" : null)}
-      ${kv("Floor area", p.sqft ? fmt(p.sqft) + " sq ft" : null)}
-      ${kv("Generators", p.generators ? fmt(p.generators) : p.generator_mw ? p.generator_mw + " MW of generators" : null)}
-      ${kv("Trees removed", p.trees_removed != null ? fmt(p.trees_removed) : null)}
+      ${kv("Power load", p.mw ? p.mw + " MW" : null)}
+      ${kv("Generators", p.generators ? fmt(p.generators) : p.generator_mw ? p.generator_mw + " MW worth" : null)}
       ${kv("Cooling", p.cooling ? esc(p.cooling) : null)}
-      ${kv(p.approved ? "Approved" : "Submitted", p.approved || p.submitted || null)}
+      ${kv("Trees removed", p.trees_removed != null ? fmt(p.trees_removed) : null)}
+      ${kv("Floor area", p.sqft ? fmt(p.sqft) + " sq ft" : null)}
+      ${kv(p.approved ? "Approved" : "Filed", p.approved || p.submitted || null)}
     </dl>
-    <div class="scroll-x"><table class="rings"><thead><tr><th></th><th>1,000 ft</th><th>½ mile</th><th>1 mile</th></tr></thead>
-      <tbody>${rows.map(([l, fn]) => `<tr><td>${l}</td>${["ft1000", "mi05", "mi1"].map(fn).join("")}</tr>`).join("")}</tbody></table></div>
-    <p class="note"><span class="hi">Red</span> values are worse than San José's population median. Ring counts are apportioned by area from census tracts, so 1,000-ft figures are approximate.</p>
-    <div class="flags">${flags.map(([c, t]) => `<span class="flag ${c}">${t}</span>`).join("")}</div>`;
+    <div class="flags">${flags.map(([c, t]) => `<span class="flag ${c}">${t}</span>`).join("")}</div>
+    ${table("Who lives nearby", [
+      ["Residents", k => `<td>${fmt(r[k].pop)}</td>`],
+      ["Children under 10", k => `<td>${fmt(r[k].kids)}</td>`],
+      ["Adults 65+", k => `<td>${fmt(r[k].elders)}</td>`],
+      ["Schools (students)", k => `<td>${r[k].schools}${r[k].students ? ` (${fmt(r[k].students)})` : ""}</td>`],
+      ["Hospitals & care", k => `<td>${r[k].health}</td>`],
+      ["In disadvantaged areas", k => `<td>${fmt(r[k].dac_pop_pct)}%</td>`],
+    ])}
+    ${table("What they already face", [
+      ["Diesel exhaust, state pctile", k => cell(r[k].w_dieselP, "dieselP")],
+      ["Asthma ER, state pctile", k => cell(r[k].w_asthmaP, "asthmaP")],
+      ["Poverty, state pctile", k => cell(r[k].w_povP, "povP")],
+      ["Summer ground temp, °F", k => cell(r[k].w_lst_c, "lst_c", 0, toF)],
+      ["Tree canopy, %", k => cell(r[k].w_canopy_pct, "canopy_pct", 1, x => x, true)],
+    ])}
+    <p class="note"><span class="hi">Red</span> means worse than the San José median. Counts are estimated from census tracts, so the 1,000-ft figures are approximate.</p>`;
 }
 
 /* ---------- districts ---------- */
 function buildDistricts() {
   const ds = D.districts.features.map(f => f.properties).sort((a, b) => a.district - b.district);
-  const maxMW = Math.max(...ds.map(d => d.mw_known), 1);
-  const t = document.getElementById("disttable");
-  t.innerHTML = `<thead><tr><th>District</th><th>Projects: review / approved</th><th>Stated MW</th><th>% in SB 535 tracts</th><th>Diesel PM pctile</th><th>Asthma ER pctile</th><th>Summer °F</th><th>Canopy %</th></tr></thead>
-    <tbody>${ds.map(d => `<tr data-d="${d.district}" tabindex="0">
-      <td><b>D${d.district}</b><span class="member">${esc(d.member)}</span></td>
-      <td>${d.projects_review} / ${d.projects_approved}</td>
-      <td>${d.mw_known ? fmt(d.mw_known) + `<span class="bar" style="width:${Math.round(36 * d.mw_known / maxMW)}px"></span>` : "—"}</td>
-      <td>${fmt(d.dac_pop_pct)}</td><td>${fmt(d.w_dieselP)}</td><td>${fmt(d.w_asthmaP)}</td><td>${fmt(toF(d.w_lst_c))}</td><td>${fmt(d.w_canopy_pct, 1)}</td></tr>`).join("")}</tbody>`;
-  const go = tr => {
-    t.querySelectorAll("tr.sel").forEach(x => x.classList.remove("sel"));
-    tr.classList.add("sel");
-    const f = D.districts.features.find(f => f.properties.district === tr.dataset.d);
-    map.fitBounds(L.geoJSON(f).getBounds(), {padding: [20, 20]});
+  $("dpick").innerHTML = ds.map(d => {
+    const n = d.projects_review + d.projects_approved;
+    return `<button data-d="${d.district}" aria-pressed="false" class="${n ? "has" : ""}" aria-label="District ${d.district}, ${n} projects">D${d.district}<small>${n ? n + " proj" : "none"}</small></button>`;
+  }).join("");
+  $("dpick").querySelectorAll("button").forEach(b => b.addEventListener("click", () => showDistrict(b.dataset.d, true)));
+  $("disttable").innerHTML = `<thead><tr><th>District</th><th>Projects</th><th>Stated MW</th><th>% disadv.</th><th>Diesel</th><th>Asthma ER</th><th>Summer °F</th></tr></thead>
+    <tbody>${ds.map(d => `<tr><td>D${d.district} · ${esc(d.member)}</td><td>${d.projects_review + d.projects_approved}</td><td>${d.mw_known ? fmt(d.mw_known) : "—"}</td><td>${fmt(d.dac_pop_pct)}</td><td>${fmt(d.w_dieselP)}</td><td>${fmt(d.w_asthmaP)}</td><td>${fmt(toF(d.w_lst_c))}</td></tr>`).join("")}</tbody>`;
+  const busiest = ds.reduce((a, d) => (d.projects_review + d.projects_approved > a.projects_review + a.projects_approved ? d : a));
+  showDistrict(busiest.district, false);
+}
+function showDistrict(id, zoom) {
+  const f = D.districts.features.find(f => f.properties.district === id), d = f.properties;
+  $("dpick").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.d === id)));
+  const sites = D.sites.features.map(s => s.properties).filter(p => p.district === id && p.status !== "existing");
+  const kv = (l, v) => `<div><dt>${l}</dt><dd>${v}</dd></div>`;
+  const n = sites.length;
+  $("dcard").innerHTML = `<h3>District ${id}</h3><div class="who">Councilmember ${esc(d.member)} · ${fmt(d.population)} residents</div>
+    <p style="margin:0">${n ? `Hosts <b>${n}</b> pending or approved project${n > 1 ? "s" : ""}${d.mw_known ? `, with <b>${fmt(d.mw_known)} MW</b> of stated load` : ""}.` : "No pending or approved projects."}
+      ${fmt(d.dac_pop_pct)}% of residents live in state-designated disadvantaged neighborhoods. Diesel exhaust exposure is at the ${ordinal(d.w_dieselP)} state percentile.</p>
+    <dl class="kv">
+      ${kv("Diesel exhaust", ordinal(d.w_dieselP) + " pctile")}
+      ${kv("Asthma ER visits", ordinal(d.w_asthmaP) + " pctile")}
+      ${kv("Poverty", ordinal(d.w_povP) + " pctile")}
+      ${kv("Summer ground temp", fmt(toF(d.w_lst_c)) + "°F")}
+      ${kv("Tree canopy", fmt(d.w_canopy_pct, 1) + "%")}
+      ${kv("Disadvantaged areas", fmt(d.dac_pop_pct) + "%")}
+    </dl>
+    ${n ? `<div class="flags">${sites.map(p => `<span class="flag">${esc(p.address)} · ${STATUS[p.status]}</span>`).join("")}</div>` : ""}`;
+  if (districtHi) map.removeLayer(districtHi);
+  districtHi = L.geoJSON(f, {pane: "lines", interactive: false, style: {color: cssVar("--accent"), weight: 4, fill: false}}).addTo(map);
+  if (zoom) map.fitBounds(districtHi.getBounds(), {padding: [20, 20]});
+}
+
+/* ---------- beyond San José ---------- */
+let precScope = "All", precTopic = "All";
+function buildBeyond() {
+  const ctx = D.ctx;
+  const ca = ctx.focus.find(s => s.code === "CA"), us = ctx.us;
+  const caLast = ca.prices[ca.prices.length - 1], usLast = us.prices[us.prices.length - 1];
+  $("latestYear").textContent = ctx.latest_year;
+  $("priceTakeaway").innerHTML = `California households paid <b>${fmt(caLast, 1)}¢/kWh</b> in ${ctx.latest_year}, the highest in the continental U.S. and <b>${fmt(caLast / usLast, 1)}×</b> the national average. Prices rose <b>${fmt(ca.change_since_2020_pct)}%</b> since 2020, against ${fmt(us.change_since_2020_pct)}% nationally. Virginia and Texas, the two largest data center markets, sit near the national average.`;
+  const others = ctx.focus.filter(s => s.code !== "CA").map(s => s.code).join(", ");
+  $("priceLegend").innerHTML = `<span><i style="border-color:var(--accent)"></i>California</span><span><i style="border-color:var(--ink);border-top-style:dashed"></i>U.S. average</span><span><i style="border-color:var(--line)"></i>Other data center states (${others})</span>`;
+  const series = [ca, us, ...ctx.focus.filter(s => s.code !== "CA")];
+  $("priceTable").innerHTML = `<thead><tr><th>Year</th>${series.map(s => `<th>${s.code}</th>`).join("")}</tr></thead><tbody>${ca.years.map(y => `<tr><td>${y}</td>${series.map(s => `<td>${fmt(s.prices[s.years.indexOf(y)], 1)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  drawPriceChart();
+
+  $("caFacts").innerHTML = ctx.ca_facts.map(f => `<div class="stat"><b>${esc(f.value)}</b><span>${esc(f.label)}</span><a href="${f.url}" target="_blank" rel="noopener">${esc(f.source)}</a></div>`).join("");
+
+  const chipRow = (el, vals, allLabel, set) => {
+    $(el).innerHTML = vals.map(v => `<button class="chip" data-v="${esc(v)}" aria-pressed="${v === "All"}">${esc(v === "All" ? allLabel : v)}</button>`).join("");
+    $(el).querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
+      set(c.dataset.v);
+      $(el).querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", String(x === c)));
+      renderPrecedents();
+    }));
   };
-  t.querySelectorAll("tbody tr").forEach(tr => {
-    tr.addEventListener("click", () => go(tr));
-    tr.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(tr); } });
+  chipRow("scopeFilter", ["All", "California", "Other states"], "Everywhere", v => { precScope = v; });
+  chipRow("topicFilter", ["All", ...new Set(ctx.precedents.flatMap(p => p.topics))], "All topics", v => { precTopic = v; });
+  renderPrecedents();
+}
+function renderPrecedents() {
+  const list = D.ctx.precedents
+    .filter(p => (precScope === "All" || p.scope === precScope) && (precTopic === "All" || p.topics.includes(precTopic)))
+    .sort((a, b) => (a.scope === "California" ? 0 : 1) - (b.scope === "California" ? 0 : 1) || b.date.localeCompare(a.date));
+  const month = d => new Date(d + "-15T12:00:00").toLocaleString("en-US", {month: "short", year: "numeric"});
+  $("precedents").innerHTML = list.length ? list.map(p => `<article class="pcard">
+      <div class="where"><b>${esc(p.place)}</b><span>${esc(p.state)}</span><span>${month(p.date)}</span></div>
+      <h4>${esc(p.title)}</h4>
+      <p>${esc(p.what)}</p>
+      <p class="lesson"><b>For San José:</b> ${esc(p.lesson)}</p>
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
+        <div class="tags">${p.topics.map(t => `<span class="tag">${esc(t)}</span>`).join("")}</div>
+        <a class="src" href="${p.url}" target="_blank" rel="noopener">${esc(p.source)}</a>
+      </div></article>`).join("") : `<p class="note">No examples match both filters.</p>`;
+}
+function drawPriceChart() {
+  const host = $("priceChart");
+  if (!D.ctx || !host) return;
+  const ctx = D.ctx;
+  const ca = ctx.focus.find(s => s.code === "CA"), us = ctx.us, others = ctx.focus.filter(s => s.code !== "CA");
+  const W = 440, H = 240, m = {l: 32, r: 108, t: 10, b: 24};
+  const years = ca.years, x0 = years[0], x1 = years[years.length - 1];
+  const yMax = Math.ceil(Math.max(...ctx.focus.flatMap(s => s.prices), ...us.prices) / 5) * 5;
+  const X = y => m.l + (y - x0) / (x1 - x0) * (W - m.l - m.r), Y = v => H - m.b - v / yMax * (H - m.t - m.b);
+  const path = s => s.years.map((y, i) => `${i ? "L" : "M"}${X(y).toFixed(1)},${Y(s.prices[i]).toFixed(1)}`).join("");
+  const ticks = [];
+  for (let v = 0; v <= yMax; v += 5) ticks.push(v);
+  const last = s => s.prices[s.prices.length - 1];
+  const caY = Y(last(ca));
+  let usY = Y(last(us));
+  if (Math.abs(caY - usY) < 14) usY = caY + 14;
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Residential electricity prices: California rises from ${fmt(ca.prices[0], 1)} to ${fmt(last(ca), 1)} cents per kWh; U.S. average from ${fmt(us.prices[0], 1)} to ${fmt(last(us), 1)}.">
+    <g class="grid">${ticks.map(v => `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}"></line>`).join("")}</g>
+    <g class="axis">${ticks.map(v => `<text x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end">${v}¢</text>`).join("")}
+      ${years.filter(y => y % 2 === 1 || y === x1).map(y => `<text x="${X(y)}" y="${H - 6}" text-anchor="middle">${y}</text>`).join("")}</g>
+    ${others.map(s => `<path d="${path(s)}" fill="none" stroke="${cssVar("--line")}" stroke-width="1.5" stroke-linejoin="round"></path>`).join("")}
+    <path d="${path(us)}" fill="none" stroke="${cssVar("--ink")}" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"></path>
+    <path d="${path(ca)}" fill="none" stroke="${cssVar("--accent")}" stroke-width="2.5" stroke-linejoin="round"></path>
+    <circle cx="${X(x1)}" cy="${caY}" r="4" fill="${cssVar("--accent")}" stroke="${cssVar("--panel")}" stroke-width="2"></circle>
+    <text class="lbl" x="${X(x1) + 8}" y="${caY + 4}">California ${fmt(last(ca), 1)}¢</text>
+    <text class="lbl" x="${X(x1) + 8}" y="${usY + 4}" style="font-weight:500">U.S. ${fmt(last(us), 1)}¢</text>
+    <line class="xhair" x1="0" x2="0" y1="${m.t}" y2="${H - m.b}" stroke="${cssVar("--muted")}" stroke-width="1" visibility="hidden"></line>
+    <rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" fill="transparent"></rect>
+  </svg><div class="tip" hidden></div>`;
+  const svg = host.querySelector("svg"), tip = host.querySelector(".tip"), xh = host.querySelector(".xhair");
+  const all = [ca, us, ...others];
+  svg.addEventListener("pointermove", e => {
+    const r = svg.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * W;
+    const y = Math.max(x0, Math.min(x1, Math.round(x0 + (sx - m.l) / (W - m.l - m.r) * (x1 - x0))));
+    xh.setAttribute("x1", X(y)); xh.setAttribute("x2", X(y)); xh.setAttribute("visibility", "visible");
+    const rows = all.map(s => ({s, v: s.prices[s.years.indexOf(y)]})).filter(o => o.v != null).sort((a, b) => b.v - a.v);
+    tip.innerHTML = `<b>${y}</b>${rows.map(o => `<div class="${o.s.code === "CA" ? "ca" : ""}"><span>${o.s.code === "US" ? "U.S. average" : esc(o.s.name)}</span><span>${fmt(o.v, 1)}¢</span></div>`).join("")}`;
+    tip.hidden = false;
+    const px = X(y) / W * r.width;
+    tip.style.left = (px > r.width / 2 ? px - tip.offsetWidth - 12 : px + 12) + "px";
+    tip.style.top = "4px";
   });
+  svg.addEventListener("pointerleave", () => { tip.hidden = true; xh.setAttribute("visibility", "hidden"); });
 }
 
-/* ---------- weights ---------- */
-function buildWeights() {
-  document.getElementById("weights").innerHTML = Object.entries(DOMAIN_INFO).map(([k, v]) => `<div class="weight">
-    <label for="w-${k}"><span>${v.label}<small>${v.desc}</small></span><span class="num" id="wv-${k}"></span></label>
-    <input type="range" id="w-${k}" min="0" max="50" step="1" value="${weights[k]}"></div>`).join("");
-  const sync = () => {
-    const tot = Object.values(weights).reduce((a, b) => a + b, 0) || 1;
-    Object.keys(weights).forEach(k => {
-      document.getElementById(`w-${k}`).value = weights[k];
-      document.getElementById(`wv-${k}`).textContent = Math.round(100 * weights[k] / tot) + "%";
-    });
-    computeComposite();
-    if (metric.id === "composite") { computeBreaks(); tractLayer.setStyle(tractStyle); renderLegend(); }
-    renderTop();
-  };
-  Object.keys(weights).forEach(k => document.getElementById(`w-${k}`).addEventListener("input", e => { weights[k] = +e.target.value; sync(); }));
-  document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => { weights = {...PRESETS[b.dataset.preset]}; sync(); }));
-  document.getElementById("showComposite").addEventListener("click", () => { setLayer("heat", false); setMetric("composite"); });
-  sync();
-}
-function renderTop() {
-  const top = [...D.tracts.features].sort((a, b) => b.properties._composite - a.properties._composite).slice(0, 10);
-  const ol = document.getElementById("toplist");
-  ol.innerHTML = top.map((f, i) => `<li><button data-k="${i}"><span>${tractName(f.properties.tract)}${f.properties.dac ? " · SB 535" : ""} · ${fmt(f.properties.dc_dist_mi, 1)} mi from a data center</span><span class="num">${fmt(f.properties._composite)}</span></button></li>`).join("");
-  ol.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
-    const f = top[+b.dataset.k], bounds = L.geoJSON(f).getBounds();
-    map.fitBounds(bounds, {maxZoom: 14});
-    L.popup({maxWidth: 320}).setLatLng(bounds.getCenter()).setContent(tractPopup(f.properties)).openOn(map);
-  }));
-}
-
-/* ---------- sources ---------- */
-function buildSources() {
-  document.getElementById("generated").textContent = `Compiled ${D.summary.generated}. Every layer comes from a public source and can be rebuilt with the pipeline in the project repository.`;
+/* ---------- about ---------- */
+function buildAbout() {
+  $("generated").textContent = `Compiled ${D.summary.generated}. Every layer comes from a public source and can be rebuilt with the pipeline in the project repository.`;
   const src = [
-    ["City of San José: Data Center and other Large Energy-Use Projects", "https://www.sanjoseca.gov/your-government/departments-offices/planning-building-code-enforcement/planning-division/data-center-and-other-large-energy-use-projects", "Permit files, addresses, MW, generators, trees and cooling (page updated July 13, 2026). Operating facilities are a partial list from operator-published addresses."],
-    ["CalEnviroScreen 4.0 (OEHHA)", "https://oehha.ca.gov/calenviroscreen/report/calenviroscreen-40", "Pollution, health and population indicators by 2010 census tract, as statewide percentiles."],
-    ["SB 535 Disadvantaged Communities, 2022 (CalEPA)", "https://oehha.ca.gov/calenviroscreen/sb535", "The official disadvantaged-community designation."],
-    ["CDC PLACES, census tract data", "https://www.cdc.gov/places/", "Model-based estimates of adult asthma, COPD, heart disease and more, on 2020 tracts."],
-    ["Landsat 8/9 Collection 2 Level-2 surface temperature (USGS, via Microsoft Planetary Computer)", "https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2", "Nine cloud-free scenes, June to September 2023–2025, with clouds and water masked; per-pixel median."],
-    ["NLCD 2021 impervious surface and tree canopy (MRLC)", "https://www.mrlc.gov/", "30 m rasters averaged per tract."],
+    ["City of San José: Data Center and other Large Energy-Use Projects", "https://www.sanjoseca.gov/your-government/departments-offices/planning-building-code-enforcement/planning-division/data-center-and-other-large-energy-use-projects", "Permit files, addresses, power, generators, trees and cooling (page updated July 13, 2026). Operating facilities are a partial list."],
+    ["CalEnviroScreen 4.0 (OEHHA)", "https://oehha.ca.gov/calenviroscreen/report/calenviroscreen-40", "Pollution, health and population indicators by census tract, ranked statewide."],
+    ["SB 535 Disadvantaged Communities, 2022 (CalEPA)", "https://oehha.ca.gov/calenviroscreen/sb535", "California's official disadvantaged-community designation."],
+    ["CDC PLACES", "https://www.cdc.gov/places/", "Adult asthma, COPD and heart disease estimates by census tract."],
+    ["Landsat 8/9 surface temperature (USGS, via Microsoft Planetary Computer)", "https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2", "Nine clear summer days, 2023–2025, per-pixel median."],
+    ["NLCD 2021 (MRLC)", "https://www.mrlc.gov/", "Paved surface and tree canopy, 30 m."],
     ["California Public Schools 2024–25 (CDE)", "https://data.ca.gov/dataset/california-public-schools-2024-25", "School locations and enrollment."],
-    ["Licensed Healthcare Facilities, December 2024 (CDPH)", "https://data.chhs.ca.gov/", "Open hospitals, skilled nursing and other licensed facilities."],
-    ["FEMA National Flood Hazard Layer", "https://www.fema.gov/flood-maps/national-flood-hazard-layer", "Special Flood Hazard Areas (100-year)."],
-    ["City of San José GIS", "https://gisdata-csj.opendata.arcgis.com/", "Council districts (2021 lines), zoning, wetlands and the Cortese list."],
-    ["US Census TIGERweb", "https://tigerweb.geo.census.gov/", "2020 tracts, plus roads and water for the base map."],
-    ["KQED: San José and PG&E power agreement", "https://www.kqed.org/news/12049830/san-jose-and-pge-strike-deal-to-attract-data-centers-to-south-bay", "880 MW for ten large-load projects, about 80% of the city's current use."],
+    ["Licensed Healthcare Facilities, Dec 2024 (CDPH)", "https://data.chhs.ca.gov/", "Open hospitals, nursing and other licensed facilities."],
+    ["FEMA National Flood Hazard Layer", "https://www.fema.gov/flood-maps/national-flood-hazard-layer", "100-year flood zones."],
+    ["City of San José GIS", "https://gisdata-csj.opendata.arcgis.com/", "Council districts, zoning, wetlands and the Cortese list."],
+    ["U.S. Energy Information Administration", D.ctx.price_source.url, "Residential electricity prices by state, 2015 onward."],
   ];
-  document.getElementById("sources").innerHTML = src.map(([t, u, d]) => `<div><dt><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></dt><dd>${esc(d)}</dd></div>`).join("");
-  document.getElementById("methods").innerHTML = [
-    "Census tracts are the 2010 tracts that CalEnviroScreen uses. A tract is included when at least 5% of its area is inside city limits.",
-    "Each domain averages its component percentiles, then re-ranks San José tracts so that 100 means the most burdened tract in the city.",
-    "Ring populations are apportioned by area from tract totals (ACS 2015–2019, via CalEnviroScreen). Smaller rings are less precise.",
-    "District values are population-weighted across the tracts each district overlaps.",
-    "Surface temperature measures how hot the ground gets at the satellite's late-morning pass. It runs hotter than air temperature but shows where heat builds up. ECOSTRESS data can replace it (see pipeline/ecostress_optional.py).",
-    "Residential share counts R- and UR zoning. Mixed-use and downtown zones that allow housing are reported separately.",
+  $("sources").innerHTML = src.map(([t, u, d]) => `<div><dt><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></dt><dd>${esc(d)}</dd></div>`).join("") +
+    `<div><dt>Policy examples</dt><dd>Each example in Beyond San José links to its own news, legal or government source, checked in October 2026.</dd></div>`;
+  $("methods").innerHTML = [
+    "Neighborhoods are the 2010 census tracts CalEnviroScreen uses. A tract is included when at least 5% of it is inside city limits.",
+    "Each map lens averages its indicators' percentiles, then ranks San José neighborhoods from 0 to 100, so 100 means the most burdened in the city.",
+    "Ring counts split each tract's population by area (ACS 2015–2019 via CalEnviroScreen). Small rings are approximate.",
+    "District figures are population-weighted across the tracts each district overlaps.",
+    "Ground temperature is the land's surface temperature at the satellite's late-morning pass. It runs hotter than air temperature but shows where heat builds up.",
+    "Policy examples are curated and sourced. Each one is paired with an action San José could take.",
   ].map(t => `<li>${t}</li>`).join("");
 }
 
 /* ---------- tabs ---------- */
 function selectTab(name) {
-  if (!document.getElementById(`pane-${name}`)) return;
+  if (!$(`pane-${name}`)) return;
   document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
   document.querySelectorAll(".pane").forEach(p => { p.hidden = p.id !== `pane-${name}`; });
 }

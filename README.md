@@ -36,6 +36,7 @@ The page has to be served over http; opening `index.html` directly from disk blo
 
 - **New or changed permits:** edit `pipeline/sites.json`, delete `pipeline/cache/sites_geocoded.json`, and rerun. Leave a field `null` when the filing doesn't state it. Add `"lon"`/`"lat"` to any address the geocoder misses.
 - **Refresh every source:** delete `pipeline/cache/` and rerun.
+- **Add a policy example from another city or state:** add an entry to `pipeline/precedents.json` with a source URL and a "lesson" tied to something San José can do, then run `pipeline/context.py`. That step also pulls EIA residential electricity prices by state (set `EIA_API_KEY` for heavy use).
 - **ECOSTRESS instead of Landsat heat:** see `pipeline/ecostress_optional.py` (needs a free NASA Earthdata login).
 
 ## Limits to state when presenting

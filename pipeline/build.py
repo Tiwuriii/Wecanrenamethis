@@ -259,6 +259,10 @@ def main():
     tracts = load_tracts(city_utm)
     join_places(tracts)
     score_domains(tracts)
+    # council district holding most of each tract's area, so popups can name it
+    dist_utm = [(to_utm(g.buffer(0)), d["DISTRICT"]) for g, d in districts]
+    for t in tracts:
+        t["p"]["district"] = max(dist_utm, key=lambda gd: gd[0].intersection(t["utm"]).area)[1]
     sites = load_cache("sites_geocoded.json")
     proximity(tracts, sites)
 
